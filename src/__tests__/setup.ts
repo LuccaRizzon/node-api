@@ -9,7 +9,7 @@ beforeAll(async () => {
       await AppDataSource.initialize();
     }
   } catch (error) {
-    console.error("Erro ao inicializar DataSource nos testes:", error);
+    console.error("Error initializing DataSource in tests:", error);
   }
 });
 
@@ -19,7 +19,7 @@ afterAll(async () => {
       await AppDataSource.destroy();
     }
   } catch (error) {
-    console.error("Erro ao fechar DataSource nos testes:", error);
+    console.error("Error closing DataSource in tests:", error);
   }
 });
 

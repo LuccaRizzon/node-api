@@ -5,7 +5,6 @@ import "reflect-metadata";
 
 async function seed() {
     try {
-        // Valida variáveis de ambiente
         const requiredEnvVars = ['DB_HOST', 'DB_PORT', 'DB_USERNAME', 'DB_PASSWORD', 'DB_DATABASE'];
         const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
         
@@ -21,7 +20,6 @@ async function seed() {
 
         const produtoRepository = AppDataSource.getRepository(Produto);
 
-        // Verifica se já existem produtos
         const existingProducts = await produtoRepository.count();
         if (existingProducts > 0) {
             console.log(`Database already has ${existingProducts} products. Skipping seed.`);

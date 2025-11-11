@@ -26,7 +26,7 @@ describe("Venda API Endpoints", () => {
   });
 
   describe("POST /vendas - Criar Venda", () => {
-    it("deve criar uma venda com sucesso", async () => {
+    it("should create a sale successfully", async () => {
       const vendaData = {
         codigo: "VND-001",
         nomeCliente: "João Silva",
@@ -55,7 +55,7 @@ describe("Venda API Endpoints", () => {
       expect(parseFloat(response.body.valorTotal)).toBe(100.00);
     });
 
-    it("deve criar uma venda com desconto", async () => {
+    it("should create a sale with discount", async () => {
       const vendaData = {
         codigo: "VND-002",
         nomeCliente: "Maria Santos",
@@ -79,7 +79,7 @@ describe("Venda API Endpoints", () => {
       expect(parseFloat(response.body.descontoVenda)).toBe(10.00);
     });
 
-    it("deve criar uma venda com múltiplos itens", async () => {
+    it("should create a sale with multiple items", async () => {
       const produto2 = await createTestProduct("Produto 2", 30.00);
       
       const vendaData = {
@@ -108,7 +108,7 @@ describe("Venda API Endpoints", () => {
       expect(parseFloat(response.body.valorTotal)).toBe(190.00);
     });
 
-    it("deve retornar erro 400 quando codigo está faltando", async () => {
+    it("should return error 400 when codigo is missing", async () => {
       const vendaData = {
         nomeCliente: "João Silva",
         itens: [
@@ -128,7 +128,7 @@ describe("Venda API Endpoints", () => {
       expect(response.body.error).toContain("codigo");
     });
 
-    it("deve retornar erro 400 quando nomeCliente está faltando", async () => {
+    it("should return error 400 when nomeCliente is missing", async () => {
       const vendaData = {
         codigo: "VND-004",
         itens: [
@@ -149,7 +149,7 @@ describe("Venda API Endpoints", () => {
       expect(response.body.error).toContain("required");
     });
 
-    it("deve retornar erro 400 quando itens está faltando", async () => {
+    it("should return error 400 when itens is missing", async () => {
       const vendaData = {
         codigo: "VND-005",
         nomeCliente: "João Silva"
@@ -164,7 +164,7 @@ describe("Venda API Endpoints", () => {
       expect(response.body.error).toContain("required");
     });
 
-    it("deve retornar erro 400 quando itens é um array vazio", async () => {
+    it("should return error 400 when itens is an empty array", async () => {
       const vendaData = {
         codigo: "VND-006",
         nomeCliente: "João Silva",
@@ -180,7 +180,7 @@ describe("Venda API Endpoints", () => {
       expect(response.body.error).toContain("at least one item");
     });
 
-    it("deve retornar erro 400 quando produto não existe", async () => {
+    it("should return error 400 when product does not exist", async () => {
       const vendaData = {
         codigo: "VND-007",
         nomeCliente: "João Silva",
@@ -209,7 +209,7 @@ describe("Venda API Endpoints", () => {
       await createTestSale("VND-LIST-003", "Cliente 3", produtoTeste.id);
     });
 
-    it("deve listar todas as vendas", async () => {
+    it("should list all sales", async () => {
       const response = await requestApp
         .get("/vendas")
         .expect(200);
@@ -222,7 +222,7 @@ describe("Venda API Endpoints", () => {
       expect(response.body.paginacao.limit).toBe(10);
     });
 
-    it("deve listar vendas com paginação", async () => {
+    it("should list sales with pagination", async () => {
       const response = await requestApp
         .get("/vendas?page=1&limit=2")
         .expect(200);
@@ -232,7 +232,7 @@ describe("Venda API Endpoints", () => {
       expect(response.body.paginacao.limit).toBe(2);
     });
 
-    it("deve listar vendas com filtro de data", async () => {
+    it("should list sales with data filter", async () => {
       const hoje = new Date().toISOString().split('T')[0];
       const amanha = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
@@ -244,7 +244,7 @@ describe("Venda API Endpoints", () => {
       expect(response.body).toHaveProperty("totalizadores");
     });
 
-    it("deve retornar totalizadores corretos", async () => {
+    it("should return correct totals", async () => {
       const response = await requestApp
         .get("/vendas")
         .expect(200);
@@ -263,7 +263,7 @@ describe("Venda API Endpoints", () => {
       vendaCriada = await createTestSale("VND-GET-001", "Cliente Get", produtoTeste.id);
     });
 
-    it("deve buscar uma venda existente", async () => {
+    it("should find an existing sale", async () => {
       const response = await requestApp
         .get(`/vendas/${vendaCriada.id}`)
         .expect(200);
@@ -275,7 +275,7 @@ describe("Venda API Endpoints", () => {
       expect(response.body.itens.length).toBeGreaterThan(0);
     });
 
-    it("deve retornar erro 404 quando venda não existe", async () => {
+    it("should return error 404 when sale does not exist", async () => {
       const response = await requestApp
         .get("/vendas/99999")
         .expect(404);
@@ -283,7 +283,7 @@ describe("Venda API Endpoints", () => {
       expect(response.body).toHaveProperty("error", "Sale not found");
     });
 
-    it("deve retornar erro 400 quando ID é inválido", async () => {
+    it("should return error 400 when ID is invalid", async () => {
       const response = await requestApp
         .get("/vendas/abc")
         .expect(400);
@@ -299,7 +299,7 @@ describe("Venda API Endpoints", () => {
       vendaCriada = await createTestSale("VND-UPD-001", "Cliente Update", produtoTeste.id);
     });
 
-    it("deve atualizar uma venda existente", async () => {
+    it("should update an existing sale", async () => {
       const updateData = {
         nomeCliente: "Cliente Atualizado",
         status: StatusVenda.CONCLUIDA
@@ -315,7 +315,7 @@ describe("Venda API Endpoints", () => {
       expect(response.body.id).toBe(vendaCriada.id);
     });
 
-    it("deve atualizar o código da venda", async () => {
+    it("should update the sale code", async () => {
       const updateData = {
         codigo: "VND-UPD-001-NEW"
       };
@@ -328,7 +328,7 @@ describe("Venda API Endpoints", () => {
       expect(response.body.codigo).toBe("VND-UPD-001-NEW");
     });
 
-    it("deve atualizar os itens da venda", async () => {
+    it("should update the sale items", async () => {
       const produto2 = await createTestProduct("Produto Update", 75.00);
       
       const updateData = {
@@ -351,7 +351,7 @@ describe("Venda API Endpoints", () => {
       expect(parseFloat(response.body.valorTotal)).toBe(225.00);
     });
 
-    it("deve atualizar desconto da venda", async () => {
+    it("should update the sale discount", async () => {
       const updateData = {
         descontoVenda: 20.00
       };
@@ -365,7 +365,7 @@ describe("Venda API Endpoints", () => {
       expect(parseFloat(response.body.valorTotal)).toBe(80.00);
     });
 
-    it("deve retornar erro 404 quando venda não existe", async () => {
+    it("should return error 404 when sale does not exist", async () => {
       const updateData = {
         nomeCliente: "Cliente Teste"
       };
@@ -378,7 +378,7 @@ describe("Venda API Endpoints", () => {
       expect(response.body).toHaveProperty("error", "Sale not found");
     });
 
-    it("deve retornar erro 400 quando produto não existe na atualização", async () => {
+    it("should return error 400 when product does not exist in update", async () => {
       const updateData = {
         itens: [
           {
@@ -405,7 +405,7 @@ describe("Venda API Endpoints", () => {
       vendaCriada = await createTestSale("VND-DEL-001", "Cliente Delete", produtoTeste.id);
     });
 
-    it("deve deletar uma venda existente", async () => {
+    it("should delete an existing sale", async () => {
       await requestApp
         .delete(`/vendas/${vendaCriada.id}`)
         .expect(204);
@@ -417,7 +417,7 @@ describe("Venda API Endpoints", () => {
       expect(vendaDeletada).toBeNull();
     });
 
-    it("deve retornar erro 404 quando venda não existe", async () => {
+    it("should return error 404 when sale does not exist", async () => {
       const response = await requestApp
         .delete("/vendas/99999")
         .expect(404);
@@ -425,7 +425,7 @@ describe("Venda API Endpoints", () => {
       expect(response.body).toHaveProperty("error", "Sale not found");
     });
 
-    it("deve deletar os itens da venda em cascata", async () => {
+    it("should delete the sale items in cascade", async () => {
       const venda = await createTestSale("VND-DEL-002", "Cliente Delete 2", produtoTeste.id);
       
       await requestApp

@@ -1,7 +1,6 @@
 import { AppDataSource } from "../data-source";
 import { Venda, StatusVenda } from "../entity/Venda";
 import { VendaItem } from "../entity/VendaItem";
-import { Produto } from "../entity/Produto";
 import { ProductCache } from "../utils/ProductCache";
 
 export interface CriarVendaDTO {
