@@ -15,5 +15,10 @@ export const AppDataSource = new DataSource({
     synchronize: false,
     migrations: ["src/migration/**/*.ts"],
     migrationsTableName: "migrations",
-    logging: true,
+    logging: process.env.NODE_ENV === 'development',
+    // Connection pooling configuration for better scalability
+    extra: {
+        connectionLimit: parseInt(process.env.DB_POOL_SIZE || '10', 10),
+    },
+    poolSize: parseInt(process.env.DB_POOL_SIZE || '10', 10),
 });

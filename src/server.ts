@@ -2,6 +2,7 @@ import 'dotenv/config';
 import "reflect-metadata";
 import { app } from "./app";
 import { DisconnectServer } from "./config/db";
+import { disconnectRedis } from "./config/redis";
 
 const server = app.listen(3001, () => console.log('Server running on port 3001'));
 
@@ -13,6 +14,7 @@ const gracefulShutdown = async (signal: string) => {
         
         try {
             await DisconnectServer();
+            await disconnectRedis();
             console.log('Shutdown complete');
             process.exit(0);
         } catch (error) {

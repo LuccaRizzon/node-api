@@ -27,14 +27,37 @@ export class ErrorHandler {
     }
 
     private static isDuplicateError(error: any): boolean {
-        return error?.code === 'ER_DUP_ENTRY' || error?.errno === 1062;
+        // MySQL duplicate entry errors
+        if (error?.code === 'ER_DUP_ENTRY' || error?.errno === 1062) {
+            return true;
+        }
+        
+        // Generic unique constraint violation detection (database-agnostic)
+        const errorMessage = this.getErrorMessage(error);
+        if (errorMessage.includes('UNIQUE constraint') || 
+            errorMessage.includes('duplicate key') ||
+            errorMessage.includes('unique constraint')) {
+            return true;
+        }
+        
+        return false;
     }
 
     private static extractDuplicateField(errorMessage: string): string | null {
-        const match = errorMessage.match(/Duplicate entry '([^']+)'/i);
-
+        // MySQL format: "Duplicate entry 'VND-001' for key 'vendas.codigo'"
+        let match = errorMessage.match(/Duplicate entry '([^']+)'/i);
         if (match && match[1]) {
             return match[1];
+        }
+        
+        // SQLite format: "UNIQUE constraint failed: vendas.codigo"
+        // Extract from the error message or try to get it from the request context
+        // For SQLite, we'll need to extract from a different pattern or use a generic message
+        match = errorMessage.match(/UNIQUE constraint failed: \w+\.(\w+)/i);
+        if (match) {
+            // For SQLite, we can't extract the value directly, but we know it's a duplicate
+            // We'll return null and use a generic message
+            return null;
         }
 
         return null;
@@ -45,10 +68,22 @@ export class ErrorHandler {
 
         // Handle duplicate entry errors (422 Unprocessable Entity - OWASP)
         if (this.isDuplicateError(error)) {
-            const duplicateValue = this.extractDuplicateField(errorMessage);
-            const message = duplicateValue 
-                ? `A sale with code '${duplicateValue}' already exists`
-                : "Duplicate entry: This record already exists";
+            // Try to get duplicate value from error object (attached by service)
+            let duplicateValue = error?.duplicateValue;
+            
+            // If not available, try to extract from error message
+            if (!duplicateValue) {
+                duplicateValue = this.extractDuplicateField(errorMessage);
+            }
+            
+            // For SQLite errors, try to extract the field name to provide better context
+            let message = "Duplicate entry: This record already exists";
+            if (duplicateValue) {
+                message = `A sale with code '${duplicateValue}' already exists`;
+            } else if (errorMessage.includes('codigo')) {
+                // SQLite error mentions the field name
+                message = "A sale with this code already exists";
+            }
             
             return res.status(422).json({
                 type: "https://api.example.com/problems/duplicate-entry",

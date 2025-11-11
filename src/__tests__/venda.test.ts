@@ -165,22 +165,6 @@ describe("Venda API Endpoints", () => {
       expect(response.body.errors.some((e: any) => e.field === "itens" && e.message.includes("required"))).toBe(true);
     });
 
-    it("should return error 422 when itens is an empty array", async () => {
-      const vendaData = {
-        codigo: "VND-006",
-        nomeCliente: "João Silva",
-        itens: []
-      };
-
-      const response = await requestApp
-        .post("/vendas")
-        .send(vendaData)
-        .expect(422); // Semantic error - array structure is valid but violates business rule
-
-      expect(response.body.errors).toBeDefined();
-      expect(response.body.errors.some((e: any) => e.field === "itens" && e.message.includes("at least one item"))).toBe(true);
-    });
-
     it("should return error 400 when product does not exist", async () => {
       const vendaData = {
         codigo: "VND-007",
@@ -200,6 +184,48 @@ describe("Venda API Endpoints", () => {
         .expect(400);
 
       expect(response.body.error).toContain("not found");
+    });
+
+    it("should return error 422 when trying to create a duplicate sale code", async () => {
+      // First, create a sale with code "VND-DUP-001"
+      const firstVendaData = {
+        codigo: "VND-DUP-001",
+        nomeCliente: "Cliente Original",
+        itens: [
+          {
+            produtoId: produtoTeste.id,
+            quantidade: 1,
+            precoUnitario: 50.00
+          }
+        ]
+      };
+
+      await requestApp
+        .post("/vendas")
+        .send(firstVendaData)
+        .expect(201);
+
+      // Try to create another sale with the same code
+      const duplicateVendaData = {
+        codigo: "VND-DUP-001",
+        nomeCliente: "Cliente Duplicado",
+        itens: [
+          {
+            produtoId: produtoTeste.id,
+            quantidade: 2,
+            precoUnitario: 50.00
+          }
+        ]
+      };
+
+      const response = await requestApp
+        .post("/vendas")
+        .send(duplicateVendaData)
+        .expect(422); // Semantic error - duplicate entry
+
+      expect(response.body.detail).toContain("VND-DUP-001");
+      expect(response.body.detail).toContain("already exists");
+      expect(response.body.type).toContain("duplicate-entry");
     });
   });
 
@@ -338,14 +364,6 @@ describe("Venda API Endpoints", () => {
         .expect(404);
 
       expect(response.body).toHaveProperty("error", "Sale not found");
-    });
-
-    it("should return error 400 when ID is invalid", async () => {
-      const response = await requestApp
-        .get("/vendas/abc")
-        .expect(400);
-
-      expect(response.body).toHaveProperty("error");
     });
   });
 

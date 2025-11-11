@@ -11,3 +11,14 @@ services:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "${DB_PORT:-3306}:3306"
+
+  redis:
+    image: 'redis:7-alpine'
+    command: >
+      redis-server
+      --save 60 1000
+      --loglevel warning
+      --maxmemory ${REDIS_MAX_MEMORY:-128mb}
+      --maxmemory-policy allkeys-lru
+    ports:
+      - "${REDIS_PORT:-6379}:6379"

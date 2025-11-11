@@ -2,6 +2,7 @@ import { TestDataSource } from "./test-data-source";
 import "reflect-metadata";
 
 process.env.NODE_ENV = "test";
+process.env.REDIS_DISABLED = "true";
 
 beforeAll(async () => {
   try {

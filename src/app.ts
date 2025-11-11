@@ -4,12 +4,17 @@ import logger from 'morgan';
 
 import { ConnectServer } from './config/db';
 import { routerVenda } from './routes/venda';
+import { apiRateLimiter } from './middleware/rateLimiter';
 
 export const app = express();
 
 app.use(cors());
 app.use(express.json());
 app.use(logger('dev'));
+
+if (process.env.NODE_ENV !== 'test') {
+    app.use('/vendas', apiRateLimiter);
+}
 
 if (process.env.NODE_ENV !== 'test') {
     ConnectServer().catch((error) => {

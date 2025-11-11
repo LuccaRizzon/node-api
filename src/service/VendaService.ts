@@ -2,6 +2,7 @@ import { getDataSource } from "../utils/getDataSource";
 import { Venda, StatusVenda } from "../entity/Venda";
 import { VendaItem } from "../entity/VendaItem";
 import { ProductCache } from "../utils/ProductCache";
+import { toVendaDTO } from "../dto/VendaDTO";
 
 export interface CriarVendaDTO {
     codigo: string;
@@ -34,21 +35,6 @@ export interface ListarVendasFiltros {
     search?: string;
 }
 
-export interface ListarVendasResultado {
-    vendas: Venda[];
-    paginacao: {
-        page: number;
-        limit: number;
-        total: number;
-        totalPages: number;
-    };
-    totalizadores: {
-        valorTotal: number;
-        numeroVendas: number;
-        quantidadeItens: number;
-    };
-}
-
 export class VendaService {
     private calcularDescontoItens(vendaItens: VendaItem[], descontoVenda: number): void {
         const totalSemDesconto = vendaItens.reduce((sum, item) => {
@@ -74,7 +60,7 @@ export class VendaService {
         venda.valorTotal = vendaItens.reduce((sum, item) => sum + item.valorTotal, 0);
     }
 
-    async create(dto: CriarVendaDTO): Promise<Venda> {
+    async create(dto: CriarVendaDTO) {
         const dataSource = getDataSource();
         const queryRunner = dataSource.createQueryRunner();
         await queryRunner.connect();
@@ -97,6 +83,7 @@ export class VendaService {
                 }
 
                 const vendaItem = new VendaItem();
+                vendaItem.venda = venda;
                 vendaItem.produto = produto;
                 vendaItem.quantidade = item.quantidade;
                 vendaItem.precoUnitario = item.precoUnitario;
@@ -112,25 +99,32 @@ export class VendaService {
             venda.itens = vendaItens;
 
             const vendaSalva = await queryRunner.manager.save(Venda, venda);
-            await queryRunner.manager.save(VendaItem, vendaItens);
+            const itensSalvos = await queryRunner.manager.save(VendaItem, vendaItens);
+            vendaSalva.itens = itensSalvos;
 
             await queryRunner.commitTransaction();
 
-            const vendaCompleta = await dataSource.manager.findOne(Venda, {
-                where: { id: vendaSalva.id },
-                relations: ["itens", "itens.produto"]
-            });
-
-            return vendaCompleta!;
-        } catch (error) {
+            return toVendaDTO(vendaSalva);
+        } catch (error: any) {
             await queryRunner.rollbackTransaction().catch(() => {});
+            console.error("Error creating sale:", error);
+            // Attach the codigo to the error for better duplicate error messages
+            // Database-agnostic: check for any unique constraint violation
+            const errorMessage = error?.message || '';
+            if (error && (error.code === 'ER_DUP_ENTRY' || error.errno === 1062 || 
+                errorMessage.includes('UNIQUE constraint') ||
+                errorMessage.includes('duplicate key') ||
+                errorMessage.includes('unique constraint'))) {
+                error.duplicateField = 'codigo';
+                error.duplicateValue = dto.codigo;
+            }
             throw error;
         } finally {
             await queryRunner.release();
         }
     }
 
-    async list(filtros: ListarVendasFiltros): Promise<ListarVendasResultado> {
+    async list(filtros: ListarVendasFiltros) {
         const dataSource = getDataSource();
         const pageNumber = filtros.page || 1;
         const limitNumber = filtros.limit || 10;
@@ -152,22 +146,52 @@ export class VendaService {
             queryParams.dataFim = filtros.dataFim;
         }
 
+        let orderedByRelevance = false;
+
+        const datasourceType = (dataSource.options as any)?.type?.toString().toLowerCase?.() || '';
+        const supportsFullText = ["mysql", "mariadb"].includes(datasourceType);
+
         if (filtros.search && filtros.search.trim().length > 0) {
-            const searchTerm = `%${filtros.search.trim().toLowerCase()}%`;
-            whereConditions.push(
-                "(LOWER(venda.codigo) LIKE :search OR LOWER(venda.nomeCliente) LIKE :search OR LOWER(venda.status) LIKE :search)"
-            );
-            queryParams.search = searchTerm;
+            const rawTerms = filtros.search.trim().split(/\s+/).map(term => term.trim());
+            const sanitizedTerms = rawTerms
+                .map(term => term.replace(/[^0-9A-Za-zÀ-ÿ]/g, ""))
+                .filter(term => term.length > 0);
+
+            const canUseFullText = supportsFullText && sanitizedTerms.some(term => term.length >= 3);
+
+            if (canUseFullText) {
+                const booleanSearch = sanitizedTerms.map(term => `${term}*`).join(" ");
+                whereConditions.push(
+                    "MATCH(venda.codigo, venda.nomeCliente) AGAINST (:searchBoolean IN BOOLEAN MODE)"
+                );
+                queryParams.searchBoolean = booleanSearch;
+                queryBuilder.addSelect(
+                    "MATCH(venda.codigo, venda.nomeCliente) AGAINST (:searchBoolean IN BOOLEAN MODE)",
+                    "relevance"
+                );
+                orderedByRelevance = true;
+            } else {
+                const searchTerm = `%${filtros.search.trim().toLowerCase()}%`;
+                whereConditions.push(
+                    "(LOWER(venda.codigo) LIKE :searchLike OR LOWER(venda.nomeCliente) LIKE :searchLike OR LOWER(venda.status) LIKE :searchLike)"
+                );
+                queryParams.searchLike = searchTerm;
+            }
         }
 
         if (whereConditions.length > 0) {
             queryBuilder.where(whereConditions.join(" AND "), queryParams);
         }
 
+        if (orderedByRelevance) {
+            queryBuilder.orderBy("relevance", "DESC").addOrderBy("venda.dataHora", "DESC");
+        } else {
+            queryBuilder.orderBy("venda.dataHora", "DESC");
+        }
+
         const [vendas, total] = await queryBuilder
             .skip(skip)
             .take(limitNumber)
-            .orderBy("venda.dataHora", "DESC")
             .getManyAndCount();
 
         const totalizadoresQueryBuilder = dataSource.manager
@@ -185,7 +209,7 @@ export class VendaService {
         const totalizadores = await totalizadoresQueryBuilder.getRawOne();
 
         return {
-            vendas,
+            vendas: vendas.map(toVendaDTO),
             paginacao: {
                 page: pageNumber,
                 limit: limitNumber,
@@ -200,7 +224,7 @@ export class VendaService {
         };
     }
 
-    async findById(id: number): Promise<Venda> {
+    async findById(id: number) {
         const dataSource = getDataSource();
         const venda = await dataSource.manager.findOne(Venda, {
             where: { id },
@@ -211,10 +235,10 @@ export class VendaService {
             throw new Error("Sale not found");
         }
 
-        return venda;
+        return toVendaDTO(venda);
     }
 
-    async update(id: number, dto: AtualizarVendaDTO): Promise<Venda> {
+    async update(id: number, dto: AtualizarVendaDTO) {
         const dataSource = getDataSource();
         const queryRunner = dataSource.createQueryRunner();
         await queryRunner.connect();
@@ -276,9 +300,8 @@ export class VendaService {
                 }
 
                 venda.valorTotal = vendaItens.reduce((sum, item) => sum + item.valorTotal, 0);
-                venda.itens = vendaItens;
-
-                await queryRunner.manager.save(VendaItem, vendaItens);
+                const itensAtualizados = await queryRunner.manager.save(VendaItem, vendaItens);
+                venda.itens = itensAtualizados;
             } else if (dto.descontoVenda !== undefined) {
                 venda.descontoVenda = dto.descontoVenda;
                 if (venda.itens && venda.itens.length > 0) {
@@ -289,16 +312,15 @@ export class VendaService {
             }
 
             const vendaAtualizada = await queryRunner.manager.save(Venda, venda);
+            // ensure itens reference latest venda state
+            vendaAtualizada.itens = venda.itens;
+
             await queryRunner.commitTransaction();
 
-            const vendaCompleta = await dataSource.manager.findOne(Venda, {
-                where: { id: vendaAtualizada.id },
-                relations: ["itens", "itens.produto"]
-            });
-
-            return vendaCompleta!;
+            return toVendaDTO(vendaAtualizada);
         } catch (error) {
             await queryRunner.rollbackTransaction().catch(() => {});
+            console.error("Error updating sale:", error);
             throw error;
         } finally {
             await queryRunner.release();

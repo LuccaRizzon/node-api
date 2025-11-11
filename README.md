@@ -8,9 +8,11 @@ API REST desenvolvida em Node.js com TypeScript para gerenciamento de vendas, in
 - **Express.js** - Framework web
 - **TypeORM** - ORM para banco de dados
 - **MySQL** - Banco de dados relacional
+- **Redis** - Cache distribuído para produtos
 - **Jest** - Framework de testes
 - **Supertest** - Testes de integração
 - **express-validator** - Validação e sanitização de entrada
+- **express-rate-limit** - Rate limiting para proteção da API
 
 ## Pré-requisitos
 
@@ -34,7 +36,7 @@ npm install
 Copie o arquivo `.env.example` para `.env` e configure as variáveis:
 
 ```bash
-cp .env.example .env
+cp env.example .env
 ```
 
 Edite o arquivo `.env` com suas configurações:
@@ -46,11 +48,38 @@ DB_PORT=3306
 DB_USERNAME=root
 DB_PASSWORD=sua_senha
 DB_DATABASE=comercio
+DB_POOL_SIZE=10
 MYSQL_DATA_DIR=./mysqldata
 
 # Configuração do Cache de Produtos
 # TTL do cache em milissegundos (padrão: 300000 = 5 minutos)
 PRODUCT_CACHE_TTL_MS=300000
+# Tamanho máximo do cache (padrão: 1000 entradas)
+PRODUCT_CACHE_MAX_SIZE=1000
+PRODUCT_CACHE_KEY_PREFIX=product-cache:produto:
+PRODUCT_CACHE_LRU_KEY=product-cache:lru
+
+# Configuração do Redis
+# Informe REDIS_URL para sobrescrever host/porta (formato redis://user:pass@host:port)
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+# Usuário e senha são opcionais (Redis ACL)
+REDIS_USERNAME=
+REDIS_PASSWORD=
+# REDIS_URL=redis://127.0.0.1:6379
+# Memória máxima usada pelo container Redis quando iniciado via docker-compose
+REDIS_MAX_MEMORY=128mb
+# Use true para desabilitar o Redis (ex.: ambientes de teste automatizados)
+REDIS_DISABLED=false
+
+# Configuração de Connection Pooling
+# Valores acima de 10 devem ser avaliados com sua infraestrutura
+
+# Configuração de Rate Limiting
+# Janela de tempo em milissegundos (padrão: 900000 = 15 minutos)
+RATE_LIMIT_WINDOW_MS=900000
+# Número máximo de requisições por janela (padrão: 100)
+RATE_LIMIT_MAX_REQUESTS=100
 ```
 
 ### 4. Crie o banco de dados
@@ -58,7 +87,7 @@ PRODUCT_CACHE_TTL_MS=300000
 #### Via Docker
 
 ```bash
-docker-compose up -d
+docker-compose up -d db redis
 ```
 
 ### 5. Execute as migrações
@@ -316,6 +345,7 @@ Todas as mensagens de erro são retornadas em inglês no seguinte formato:
 
 ## Melhorias Implementadas
 
+### Funcionalidades
 - Sistema de cache para produtos com TTL configurável
 - Validação robusta de entrada com mensagens detalhadas usando `express-validator`
 - Tratamento centralizado de erros
@@ -328,6 +358,38 @@ Todas as mensagens de erro são retornadas em inglês no seguinte formato:
 - Sanitização automática de entrada
 - Proteção contra SQL Injection, XSS, Command Injection e Integer Overflow
 - Graceful shutdown para fechamento adequado de conexões
+
+### Performance e Escalabilidade
+
+#### 1. Rate Limiting
+- **Implementado**: Middleware de rate limiting usando `express-rate-limit`
+- **Configuração**: 100 requisições por 15 minutos por IP (configurável via variáveis de ambiente)
+- **Variáveis**: `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX_REQUESTS`
+
+#### 2. Database Connection Pooling
+- **Implementado**: Pool de conexões configurável no TypeORM
+- **Configuração**: 10 conexões simultâneas por padrão (configurável via `DB_POOL_SIZE`)
+- **Benefício**: Melhora a escalabilidade e performance sob carga alta
+- **Por que precisa**: Sem pooling, cada requisição criaria uma nova conexão, esgotando recursos rapidamente
+
+#### 3. Cache distribuído com Redis (TTL + Eviction)
+- **Implementado**: Cache de produtos armazenado no Redis, substituindo o cache em memória
+- **Configuração**:
+  - TTL: 5 minutos (configurável via `PRODUCT_CACHE_TTL_MS`)
+  - Tamanho máximo: 1000 entradas (configurável via `PRODUCT_CACHE_MAX_SIZE`)
+  - Política de eviction: LRU gerenciada pela aplicação + `allkeys-lru` configurado no container Redis
+- **Benefício**: Limita o uso de memória, compartilha cache entre instâncias e mantém dados consistentes após deploys
+- **Fallback**: Defina `REDIS_DISABLED=true` em ambientes onde o Redis não esteja disponível (ex.: testes automatizados)
+
+#### 4. Índices de Performance
+- **Implementado**: Índices estratégicos para as consultas mais frequentes
+- **Índices adicionados via migração**:
+  - `IDX_VENDAS_DATAHORA`: Ordenação e filtros por data (`ORDER BY dataHora DESC`)
+  - `IDX_VENDAS_STATUS_DATAHORA`: Filtros por status combinados com ordenação por data
+  - `IDX_VENDAS_NOMECLIENTE`: Apoia filtros por nome do cliente
+  - `IDX_VENDAS_FULLTEXT_SEARCH`: Índice FULLTEXT em `codigo` + `nomeCliente` para busca textual
+
+***ESTE É UM SAMPLE DE ESCALABILIDADE, EM PRODUÇÃO REAL IRIA SER DIFERENTE E MAIS ESTRUTURADO***
 
 ## Estrutura do Banco de Dados
 
