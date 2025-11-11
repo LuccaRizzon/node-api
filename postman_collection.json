@@ -1,0 +1,245 @@
+{
+	"info": {
+		"_postman_id": "vendas-api-collection",
+		"name": "Vendas API",
+		"description": "Collection for testing the Sales Management API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Criar Venda - Com Desconto na Venda",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"codigo\": \"VND-001\",\n    \"nomeCliente\": \"João Silva\",\n    \"descontoVenda\": 50.00,\n    \"status\": \"Aberta\",\n    \"itens\": [\n        {\n            \"produtoId\": 1,\n            \"quantidade\": 2,\n            \"precoUnitario\": 100.00\n        },\n        {\n            \"produtoId\": 2,\n            \"quantidade\": 1,\n            \"precoUnitario\": 150.00\n        }\n    ]\n}"
+				},
+				"url": {
+					"raw": "http://localhost:3001/venda",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3001",
+					"path": [
+						"venda"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Criar Venda - Com Desconto nos Itens",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"codigo\": \"VND-002\",\n    \"nomeCliente\": \"Maria Santos\",\n    \"status\": \"Aberta\",\n    \"itens\": [\n        {\n            \"produtoId\": 1,\n            \"quantidade\": 3,\n            \"precoUnitario\": 100.00,\n            \"descontoItem\": 20.00\n        },\n        {\n            \"produtoId\": 2,\n            \"quantidade\": 2,\n            \"precoUnitario\": 150.00,\n            \"descontoItem\": 30.00\n        }\n    ]\n}"
+				},
+				"url": {
+					"raw": "http://localhost:3001/venda",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3001",
+					"path": [
+						"venda"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Criar Venda - Sem Desconto",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"codigo\": \"VND-003\",\n    \"nomeCliente\": \"Pedro Oliveira\",\n    \"status\": \"Concluída\",\n    \"itens\": [\n        {\n            \"produtoId\": 1,\n            \"quantidade\": 1,\n            \"precoUnitario\": 100.00\n        }\n    ]\n}"
+				},
+				"url": {
+					"raw": "http://localhost:3001/venda",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3001",
+					"path": [
+						"venda"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Listar Vendas - Todas",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3001/venda",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3001",
+					"path": [
+						"venda"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Listar Vendas - Com Paginação",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3001/venda?page=1&limit=5",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3001",
+					"path": [
+						"venda"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "limit",
+							"value": "5"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Listar Vendas - Com Filtro de Período",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:3001/venda?dataInicio=2024-01-01&dataFim=2024-12-31&page=1&limit=10",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3001",
+					"path": [
+						"venda"
+					],
+					"query": [
+						{
+							"key": "dataInicio",
+							"value": "2024-01-01",
+							"description": "Data inicial no formato YYYY-MM-DD"
+						},
+						{
+							"key": "dataFim",
+							"value": "2024-12-31",
+							"description": "Data final no formato YYYY-MM-DD"
+						},
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "limit",
+							"value": "10"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Criar Venda - Erro (Produto Inexistente)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"codigo\": \"VND-ERROR\",\n    \"nomeCliente\": \"Teste Erro\",\n    \"itens\": [\n        {\n            \"produtoId\": 999,\n            \"quantidade\": 1,\n            \"precoUnitario\": 100.00\n        }\n    ]\n}"
+				},
+				"url": {
+					"raw": "http://localhost:3001/venda",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3001",
+					"path": [
+						"venda"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Criar Venda - Erro (Dados Inválidos)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"codigo\": \"VND-INVALID\",\n    \"itens\": []\n}"
+				},
+				"url": {
+					"raw": "http://localhost:3001/venda",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "3001",
+					"path": [
+						"venda"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3001",
+			"type": "string"
+		}
+	]
+}
+

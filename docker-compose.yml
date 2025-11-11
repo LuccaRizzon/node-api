@@ -1,0 +1,10 @@
+services:
+  db:
+    image: 'mysql:latest'
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    volumes:
+      - ${MYSQL_DATA_DIR}:/var/lib/mysql
+    ports:
+      - "${MYSQL_PORT}:3306"
