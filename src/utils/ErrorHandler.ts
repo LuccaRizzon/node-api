@@ -1,4 +1,5 @@
 import { Response } from "express";
+import { ValidationProblemDetails } from "../types/validation";
 
 export class ErrorHandler {
     private static getErrorMessage(error: any): string {
@@ -50,30 +51,50 @@ export class ErrorHandler {
                 : "Duplicate entry: This record already exists";
             
             return res.status(422).json({
-                error: message
+                type: "https://api.example.com/problems/duplicate-entry",
+                title: "Unprocessable Entity",
+                status: 422,
+                detail: message,
+                error: message // Backward compatibility
             });
         }
 
         if (this.isFinishedStatusError(errorMessage)) {
-            return res.status(422).json({ 
-                error: errorMessage 
+            return res.status(422).json({
+                type: "https://api.example.com/problems/business-rule-violation",
+                title: "Unprocessable Entity",
+                status: 422,
+                detail: errorMessage,
+                error: errorMessage // Backward compatibility
             });
         }
 
         if (this.isProductError(errorMessage)) {
-            return res.status(400).json({ 
-                error: errorMessage 
+            return res.status(400).json({
+                type: "https://api.example.com/problems/bad-request",
+                title: "Bad Request",
+                status: 400,
+                detail: errorMessage,
+                error: errorMessage // Backward compatibility
             });
         }
 
         if (this.isNotFoundError(errorMessage)) {
-            return res.status(404).json({ 
-                error: errorMessage 
+            return res.status(404).json({
+                type: "https://api.example.com/problems/not-found",
+                title: "Not Found",
+                status: 404,
+                detail: errorMessage,
+                error: errorMessage // Backward compatibility
             });
         }
 
-        return res.status(defaultStatus).json({ 
-            error: defaultMessage,
+        return res.status(defaultStatus).json({
+            type: "https://api.example.com/problems/internal-server-error",
+            title: "Internal Server Error",
+            status: defaultStatus,
+            detail: defaultMessage,
+            error: defaultMessage, // Backward compatibility
             details: errorMessage 
         });
     }
@@ -102,6 +123,35 @@ export class ErrorHandler {
         return res.status(422).json({
             error: message
         });
+    }
+
+    /**
+     * Returns validation errors in RFC 7807 Problem Details format
+     * Following OWASP best practices for structured error responses
+     * Also includes backward-compatible 'error' property for existing tests
+     */
+    static validationError(
+        res: Response, 
+        statusCode: number, 
+        fieldErrors: Array<{ field: string; message: string }>
+    ): Response {
+        const detail = fieldErrors.length === 1 
+            ? fieldErrors[0].message 
+            : "One or more fields failed validation.";
+        
+        const problemDetails: ValidationProblemDetails & { error?: string } = {
+            type: "https://api.example.com/problems/validation-error",
+            title: statusCode === 400 ? "Bad Request" : "Unprocessable Entity",
+            status: statusCode,
+            detail,
+            errors: fieldErrors,
+            // Backward compatibility: include 'error' property for existing tests
+            error: fieldErrors.length === 1 
+                ? `${fieldErrors[0].field}: ${fieldErrors[0].message}`
+                : `Validation failed: ${fieldErrors.map(e => `${e.field}: ${e.message}`).join('; ')}`
+        };
+
+        return res.status(statusCode).json(problemDetails);
     }
 }
 

@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "venda-api-collection",
 		"name": "Venda API - Collection",
-		"description": "Collection completa para testar todos os endpoints da API de Vendas",
+		"description": "Collection completa para testar todos os endpoints da API de Vendas, incluindo testes funcionais e de segurança baseados em práticas OWASP Top 10 2021.\n\n## Funcionalidades Testadas:\n- CRUD completo de vendas\n- Cálculo automático de totais e descontos\n- Busca por valor em campos varchar\n- Proteção contra atualização/exclusão de vendas concluídas\n- Validação robusta de entrada\n\n## Testes de Segurança OWASP:\n- A03:2021 - Injection (SQL, XSS, Command Injection)\n- A01:2021 - Broken Access Control\n- A03:2021 - Data Exposure (Integer Overflow, Decimal Precision)\n- A07:2021 - Input Validation\n- A05:2021 - Type Validation\n- A08:2021 - Array and Query Validation\n- A04:2021 - Input Sanitization",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -230,6 +230,71 @@
 							]
 						},
 						"description": "Lista vendas com filtro de data e paginação."
+					},
+					"response": []
+				},
+				{
+					"name": "Buscar Vendas Por Valor (Search)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/vendas?search=VND",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas"
+							],
+							"query": [
+								{
+									"key": "search",
+									"value": "VND",
+									"description": "Busca por valor nos campos codigo, nomeCliente e status (case-insensitive)"
+								}
+							]
+						},
+						"description": "Busca vendas por valor. A busca é realizada nos campos codigo, nomeCliente e status de forma case-insensitive."
+					},
+					"response": []
+				},
+				{
+					"name": "Buscar Vendas Com Search e Filtros Combinados",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/vendas?dataInicio=2024-01-01&dataFim=2024-12-31&search=João&page=1&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas"
+							],
+							"query": [
+								{
+									"key": "dataInicio",
+									"value": "2024-01-01"
+								},
+								{
+									"key": "dataFim",
+									"value": "2024-12-31"
+								},
+								{
+									"key": "search",
+									"value": "João"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Combina busca por valor com filtros de data e paginação."
 					},
 					"response": []
 				}
@@ -565,6 +630,67 @@
 							]
 						},
 						"description": "Testa validação de ID inválido - deve retornar erro 400"
+					},
+					"response": []
+				},
+				{
+					"name": "Erro - Tentar Atualizar Venda Concluída (422)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nomeCliente\": \"Tentativa de Atualização\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vendas/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "ID de uma venda com status 'Concluída'"
+								}
+							]
+						},
+						"description": "Testa proteção contra atualização de venda concluída - deve retornar erro 422 (Unprocessable Entity)"
+					},
+					"response": []
+				},
+				{
+					"name": "Erro - Tentar Deletar Venda Concluída (422)",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/vendas/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "ID de uma venda com status 'Concluída'"
+								}
+							]
+						},
+						"description": "Testa proteção contra exclusão de venda concluída - deve retornar erro 422 (Unprocessable Entity)"
 					},
 					"response": []
 				}

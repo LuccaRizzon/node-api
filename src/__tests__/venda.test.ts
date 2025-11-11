@@ -125,7 +125,8 @@ describe("Venda API Endpoints", () => {
         .send(vendaData)
         .expect(400);
 
-      expect(response.body.error).toContain("codigo");
+      expect(response.body.errors).toBeDefined();
+      expect(response.body.errors.some((e: any) => e.field === "codigo" && e.message.includes("codigo"))).toBe(true);
     });
 
     it("should return error 400 when nomeCliente is missing", async () => {
@@ -145,8 +146,8 @@ describe("Venda API Endpoints", () => {
         .send(vendaData)
         .expect(400);
 
-      expect(response.body.error).toContain("nomeCliente");
-      expect(response.body.error).toContain("required");
+      expect(response.body.errors).toBeDefined();
+      expect(response.body.errors.some((e: any) => e.field === "nomeCliente" && e.message.includes("required"))).toBe(true);
     });
 
     it("should return error 400 when itens is missing", async () => {
@@ -160,11 +161,11 @@ describe("Venda API Endpoints", () => {
         .send(vendaData)
         .expect(400);
 
-      expect(response.body.error).toContain("itens");
-      expect(response.body.error).toContain("required");
+      expect(response.body.errors).toBeDefined();
+      expect(response.body.errors.some((e: any) => e.field === "itens" && e.message.includes("required"))).toBe(true);
     });
 
-    it("should return error 400 when itens is an empty array", async () => {
+    it("should return error 422 when itens is an empty array", async () => {
       const vendaData = {
         codigo: "VND-006",
         nomeCliente: "João Silva",
@@ -174,10 +175,10 @@ describe("Venda API Endpoints", () => {
       const response = await requestApp
         .post("/vendas")
         .send(vendaData)
-        .expect(400);
+        .expect(422); // Semantic error - array structure is valid but violates business rule
 
-      expect(response.body.error).toContain("itens");
-      expect(response.body.error).toContain("at least one item");
+      expect(response.body.errors).toBeDefined();
+      expect(response.body.errors.some((e: any) => e.field === "itens" && e.message.includes("at least one item"))).toBe(true);
     });
 
     it("should return error 400 when product does not exist", async () => {
@@ -450,7 +451,7 @@ describe("Venda API Endpoints", () => {
         .send(updateData)
         .expect(400);
 
-      expect(response.body.error).toContain("Product");
+      expect(response.body.detail).toContain("Product");
     });
 
     it("should return error 422 when trying to update a concluded sale", async () => {
@@ -468,8 +469,8 @@ describe("Venda API Endpoints", () => {
         .send(updateData)
         .expect(422);
 
-      expect(response.body.error).toContain("Concluída");
-      expect(response.body.error).toContain("finished status");
+      expect(response.body.detail).toContain("Concluída");
+      expect(response.body.detail).toContain("finished status");
     });
   });
 
@@ -524,8 +525,8 @@ describe("Venda API Endpoints", () => {
         .delete(`/vendas/${vendaConcluida.id}`)
         .expect(422);
 
-      expect(response.body.error).toContain("Concluída");
-      expect(response.body.error).toContain("finished status");
+      expect(response.body.detail).toContain("Concluída");
+      expect(response.body.detail).toContain("finished status");
 
       // Verify the sale still exists
       const vendaAindaExiste = await TestDataSource.manager.findOne(Venda, {

@@ -10,6 +10,7 @@ API REST desenvolvida em Node.js com TypeScript para gerenciamento de vendas, in
 - **MySQL** - Banco de dados relacional
 - **Jest** - Framework de testes
 - **Supertest** - Testes de integração
+- **express-validator** - Validação e sanitização de entrada
 
 ## Pré-requisitos
 
@@ -99,14 +100,16 @@ npm start
 ```
 node-api/
 ├── src/
-│   ├── __tests__/          # Testes automatizados
+│   ├── __tests__/          # Testes automatizados (funcionais e de segurança)
 │   ├── config/             # Configurações
 │   ├── controller/         # Controladores (lógica de requisições)
 │   ├── entity/             # Entidades do banco de dados
+│   ├── middleware/         # Middlewares (validação)
 │   ├── migration/          # Migrações do banco de dados
 │   ├── routes/             # Rotas da API
-│   ├── service/             # Lógica de negócio
-│   └── utils/              # Utilitários
+│   ├── service/            # Lógica de negócio
+│   ├── utils/              # Utilitários
+│   └── validation/         # Regras de validação
 ├── .env.example            # Exemplo de variáveis de ambiente
 ├── docker-compose.yml      # Configuração Docker
 ├── jest.config.js          # Configuração Jest
@@ -114,139 +117,7 @@ node-api/
 └── tsconfig.json           # Configuração TypeScript
 ```
 
-## Endpoints da API
-
-### Base URL
-
-```
-http://localhost:3001/vendas
-```
-
-### 1. Criar Venda
-
-**POST** `/vendas`
-
-Cria uma nova venda com seus itens.
-
-**Body:**
-```json
-{
-  "codigo": "VND-001",
-  "nomeCliente": "João Silva",
-  "descontoVenda": 50.00,
-  "status": "Aberta",
-  "itens": [
-    {
-      "produtoId": 1,
-      "quantidade": 2,
-      "precoUnitario": 100.00,
-      "descontoItem": 0
-    }
-  ]
-}
-```
-
-**Resposta (201):**
-```json
-{
-  "id": 1,
-  "codigo": "VND-001",
-  "dataHora": "2024-01-15T10:30:00.000Z",
-  "nomeCliente": "João Silva",
-  "descontoVenda": 50.00,
-  "valorTotal": 150.00,
-  "status": "Aberta",
-  "itens": [...]
-}
-```
-
-### 2. Listar Vendas
-
-**GET** `/vendas`
-
-Lista vendas com filtros opcionais e paginação.
-
-**Query Parameters:**
-- `dataInicio` (opcional): Data inicial no formato YYYY-MM-DD
-- `dataFim` (opcional): Data final no formato YYYY-MM-DD
-- `page` (opcional): Número da página (padrão: 1)
-- `limit` (opcional): Itens por página (padrão: 10)
-
-**Exemplo:**
-```
-GET /vendas?dataInicio=2024-01-01&dataFim=2024-01-31&page=1&limit=10
-```
-
-**Resposta (200):**
-```json
-{
-  "vendas": [...],
-  "paginacao": {
-    "page": 1,
-    "limit": 10,
-    "total": 50,
-    "totalPages": 5
-  },
-  "totalizadores": {
-    "valorTotal": 50000.00,
-    "numeroVendas": 50,
-    "quantidadeItens": 150
-  }
-}
-```
-
-### 3. Buscar Venda por ID
-
-**GET** `/vendas/:id`
-
-Retorna uma venda específica pelo ID.
-
-**Resposta (200):**
-```json
-{
-  "id": 1,
-  "codigo": "VND-001",
-  "dataHora": "2024-01-15T10:30:00.000Z",
-  "nomeCliente": "João Silva",
-  "descontoVenda": 50.00,
-  "valorTotal": 150.00,
-  "status": "Aberta",
-  "itens": [...]
-}
-```
-
-### 4. Atualizar Venda
-
-**PUT** `/vendas/:id`
-
-Atualiza uma venda existente.
-
-**Body:**
-```json
-{
-  "codigo": "VND-001-UPDATED",
-  "nomeCliente": "João Silva Atualizado",
-  "status": "Concluída",
-  "itens": [...]
-}
-```
-
-**Resposta (200):**
-```json
-{
-  "id": 1,
-  "codigo": "VND-001-UPDATED",
-  ...
-}
-```
-
-### 5. Deletar Venda
-
-**DELETE** `/vendas/:id`
-
-Remove uma venda do sistema.
-
-**Resposta (204):** Sem conteúdo
+## Endpoints da API no postman collection de exemplo
 
 ## Regras de Negócio
 
@@ -271,10 +142,124 @@ Remove uma venda do sistema.
 ### Status da Venda
 
 - **Aberta**: Venda em andamento
-- **Concluída**: Venda finalizada
+- **Concluída**: Venda finalizada (não pode ser atualizada ou excluída)
 - **Cancelada**: Venda cancelada
 
+### Busca por Valor
+
+- O endpoint `GET /vendas` suporta busca por valor através do parâmetro `search`
+- A busca é realizada nos campos `codigo`, `nomeCliente` e `status` (case-insensitive)
+- Exemplo: `GET /vendas?search=abc` busca por "abc" em qualquer um dos campos mencionados
+
+## Segurança e OWASP
+
+### Sobre OWASP
+
+OWASP (Open Web Application Security Project) é uma organização sem fins lucrativos dedicada a melhorar a segurança de aplicações web. O projeto mantém o **OWASP Top 10**, uma lista dos 10 principais riscos de segurança em aplicações web, atualizada periodicamente.
+
+Esta API implementa práticas de segurança baseadas no OWASP Top 10 2021, garantindo proteção contra vulnerabilidades comuns.
+
+### Práticas de Segurança Implementadas
+
+#### 1. Proteção contra Injeção (A03:2021 - Injection)
+
+- **SQL Injection**: Validação de entrada com whitelist de caracteres, impedindo caracteres especiais SQL (`'`, `;`, `--`, etc.)
+- **NoSQL Injection**: Validação rigorosa de tipos, impedindo objetos maliciosos em campos numéricos
+- **Command Injection**: Rejeição de caracteres de shell (`|`, `&`, `;`, `` ` ``, `$()`)
+
+#### 2. Controle de Acesso Quebrado (A01:2021 - Broken Access Control)
+
+- Validação de IDs de parâmetros (apenas inteiros positivos válidos)
+- Validação de status da venda (apenas valores permitidos: "Aberta", "Concluída", "Cancelada")
+- Proteção contra acesso a recursos inexistentes ou inválidos
+
+#### 3. Exposição de Dados Sensíveis (A03:2021 - Data Exposure)
+
+- **Proteção contra Integer Overflow**: Validação de valores inteiros dentro do limite do MySQL INT (2,147,483,647)
+- **Precisão Decimal**: Limitação de decimais a 2 casas para valores monetários
+- Validação de limites de tamanho para strings
+
+#### 4. Falhas de Identificação e Autenticação (A07:2021)
+
+- Validação rigorosa de comprimento de strings:
+  - `codigo`: máximo 50 caracteres
+  - `nomeCliente`: máximo 100 caracteres
+  - `search`: máximo 255 caracteres
+- Validação de tipos de dados (string, integer, float)
+
+#### 5. Proteção contra XSS (A03:2021 - Cross-Site Scripting)
+
+- Rejeição de payloads XSS comuns (`<script>`, `javascript:`, `<img onerror>`, etc.)
+- Whitelist de caracteres permitidos em campos de texto
+- Sanitização automática de entrada
+
+#### 6. Configuração Incorreta de Segurança (A05:2021)
+
+- Validação de tipos de dados em todos os campos
+- Validação de limites (boundary value testing)
+- Rejeição de valores negativos onde não aplicável
+
+#### 7. Falhas de Integridade de Software e Dados (A08:2021)
+
+- Validação de arrays (tipo e conteúdo)
+- Validação de parâmetros de query (datas ISO 8601, paginação)
+- Validação de formato de datas
+
+#### 8. Design Inseguro (A04:2021)
+
+- **Sanitização de Entrada**: Remoção automática de espaços em branco no início e fim (trim)
+- Rejeição de strings contendo apenas espaços em branco
+- Normalização de dados antes do processamento
+
+### Sanitização Aplicada
+
+A API utiliza **express-validator** para sanitização e validação de entrada. As seguintes práticas são aplicadas:
+
+1. **Trim Automático**: Espaços em branco são removidos automaticamente do início e fim de strings
+2. **Whitelist de Caracteres**: Apenas caracteres alfanuméricos, espaços, hífens, underscores, pontos, vírgulas e acentos são permitidos em campos de texto
+3. **Validação de Tipo**: Conversão e validação de tipos (string, integer, float) antes do processamento
+4. **Limites de Tamanho**: Validação de comprimento máximo e mínimo para todos os campos
+5. **Validação de Formato**: Datas devem estar no formato ISO 8601 (YYYY-MM-DD)
+6. **Proteção de Overflow**: Validação de valores inteiros dentro dos limites do banco de dados
+
+### Exemplo de Validação
+
+```typescript
+// Campos de string são automaticamente sanitizados:
+"  VND-001  " → "VND-001" (trim aplicado)
+
+// Caracteres inválidos são rejeitados:
+"'; DROP TABLE vendas; --" → 400 Bad Request (caracteres SQL rejeitados)
+
+// Valores fora dos limites são rejeitados:
+produtoId: 2147483648 → 400 Bad Request (excede MySQL INT max)
+```
+
 ## Testes
+
+O projeto possui dois conjuntos de testes:
+
+### Testes Funcionais
+
+Testes que validam a funcionalidade da API, incluindo:
+- Criação, listagem, atualização e exclusão de vendas
+- Cálculo de totais e descontos
+- Validações de regras de negócio
+- Busca por valor
+- Proteção contra atualização/exclusão de vendas concluídas
+
+### Testes de Segurança (OWASP)
+
+Suite completa de testes baseada nas práticas OWASP Top 10 2021, cobrindo:
+
+- **A03:2021 - Injection**: Testes de SQL Injection, NoSQL Injection e Command Injection
+- **A01:2021 - Broken Access Control**: Validação de IDs e parâmetros
+- **A03:2021 - Data Exposure**: Proteção contra integer overflow e validação de precisão decimal
+- **A07:2021 - Identification and Authentication Failures**: Validação de comprimento de strings
+- **A03:2021 - XSS**: Rejeição de payloads XSS
+- **A05:2021 - Security Misconfiguration**: Validação de tipos e boundary values
+- **A08:2021 - Software and Data Integrity Failures**: Validação de arrays e parâmetros de query
+- **A04:2021 - Insecure Design**: Testes de sanitização de entrada
 
 Execute os testes com:
 
@@ -294,6 +279,8 @@ Execute os testes com cobertura:
 npm run test:coverage
 ```
 
+Os testes de segurança estão localizados em `src/__tests__/venda.security.test.ts` e podem ser executados isoladamente para validação de segurança.
+
 ## Scripts Disponíveis
 
 - `npm run dev` - Inicia o servidor em modo desenvolvimento com hot-reload
@@ -312,8 +299,9 @@ npm run test:coverage
 - `200` - Sucesso (GET, PUT)
 - `201` - Criado com sucesso (POST)
 - `204` - Sem conteúdo (DELETE)
-- `400` - Requisição inválida
+- `400` - Requisição inválida (validação de entrada)
 - `404` - Recurso não encontrado
+- `422` - Entidade não processável (regras de negócio, ex: venda concluída)
 - `500` - Erro interno do servidor
 
 ## Mensagens de Erro
@@ -329,11 +317,17 @@ Todas as mensagens de erro são retornadas em inglês no seguinte formato:
 ## Melhorias Implementadas
 
 - Sistema de cache para produtos com TTL configurável
-- Validação robusta de entrada com mensagens detalhadas
+- Validação robusta de entrada com mensagens detalhadas usando `express-validator`
 - Tratamento centralizado de erros
-- Testes automatizados abrangentes
+- Testes automatizados abrangentes (funcionais e de segurança)
 - Suporte a transações no banco de dados
 - Endpoints adicionais para atualização e exclusão de vendas
+- Busca por valor em campos varchar
+- Proteção contra atualização/exclusão de vendas concluídas
+- Implementação de práticas OWASP Top 10 2021
+- Sanitização automática de entrada
+- Proteção contra SQL Injection, XSS, Command Injection e Integer Overflow
+- Graceful shutdown para fechamento adequado de conexões
 
 ## Estrutura do Banco de Dados
 

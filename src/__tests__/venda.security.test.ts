@@ -6,6 +6,18 @@ import { createTestProduct, clearTestData } from "./helpers";
 
 const requestApp = request(app as any);
 
+// Helper to check error messages in RFC 7807 format
+const expectErrorContains = (response: any, text: string) => {
+    if (response.body.errors && Array.isArray(response.body.errors)) {
+        // Validation errors: check in errors array
+        const errorMessages = response.body.errors.map((e: any) => e.message).join(' ');
+        expect(errorMessages).toContain(text);
+    } else {
+        // Other errors: check in detail
+        expect(response.body.detail).toContain(text);
+    }
+};
+
 describe("Venda API Security Tests (OWASP Best Practices)", () => {
     let produtoTeste: Produto;
 
@@ -42,10 +54,10 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                                 precoUnitario: 10.00
                             }]
                         })
-                        .expect(400);
+                        .expect(422); // Semantic error - invalid characters
 
-                    expect(response.body.error).toBeDefined();
-                    expect(response.body.error).toContain("invalid characters");
+                    expect(response.body.errors || response.body.detail).toBeDefined();
+                    expectErrorContains(response, "invalid characters");
                 }
             });
 
@@ -61,9 +73,9 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                             precoUnitario: 10.00
                         }]
                     })
-                    .expect(400);
+                    .expect(422); // Semantic error - invalid characters
 
-                expect(response.body.error).toContain("invalid characters");
+                expectErrorContains(response, "invalid characters");
             });
 
             it("should reject SQL injection in search query parameter", async () => {
@@ -76,10 +88,10 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                 for (const payload of sqlInjectionPayloads) {
                     const response = await requestApp
                         .get(`/vendas?search=${encodeURIComponent(payload)}`)
-                        .expect(400);
+                        .expect(422); // Semantic error - invalid characters
 
-                    expect(response.body.error).toBeDefined();
-                    expect(response.body.error).toContain("invalid characters");
+                    expect(response.body.errors || response.body.detail).toBeDefined();
+                    expectErrorContains(response, "invalid characters");
                 }
             });
         });
@@ -99,8 +111,8 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                     })
                     .expect(400);
 
-                expect(response.body.error).toContain("produtoId");
-                expect(response.body.error).toContain("integer");
+                expectErrorContains(response, "produtoId");
+                expectErrorContains(response, "integer");
             });
         });
     });
@@ -110,17 +122,17 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
             it("should reject negative IDs", async () => {
                 const response = await requestApp
                     .get("/vendas/-1")
-                    .expect(400);
+                    .expect(422); // Semantic error - value out of range
 
-                expect(response.body.error).toContain("ID must be an integer");
+                expectErrorContains(response, "ID must be an integer");
             });
 
             it("should reject zero as ID", async () => {
                 const response = await requestApp
                     .get("/vendas/0")
-                    .expect(400);
+                    .expect(422); // Semantic error - value out of range
 
-                expect(response.body.error).toContain("ID must be an integer");
+                expectErrorContains(response, "ID must be an integer");
             });
 
             it("should reject non-numeric IDs", async () => {
@@ -129,9 +141,9 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                 for (const id of invalidIds) {
                     const response = await requestApp
                         .get(`/vendas/${id}`)
-                        .expect(400);
+                        .expect(400); // Syntactic error - wrong type
 
-                    expect(response.body.error).toContain("ID must be an integer");
+                    expectErrorContains(response, "ID must be an integer");
                 }
             });
         });
@@ -158,10 +170,10 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                                 precoUnitario: 10.00
                             }]
                         })
-                        .expect(400);
+                        .expect(422); // Semantic error - integer overflow
 
-                    expect(response.body.error).toContain("produtoId");
-                    expect(response.body.error).toContain("2147483647");
+                    expectErrorContains(response, "produtoId");
+                    expectErrorContains(response, "2147483647");
                 }
             });
 
@@ -177,19 +189,19 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                             precoUnitario: 10.00
                         }]
                     })
-                    .expect(400);
+                    .expect(422); // Semantic error - integer overflow
 
-                expect(response.body.error).toContain("quantidade");
-                expect(response.body.error).toContain("2147483647");
+                expectErrorContains(response, "quantidade");
+                expectErrorContains(response, "2147483647");
             });
 
             it("should reject page parameter exceeding MySQL INT max", async () => {
                 const response = await requestApp
                     .get("/vendas?page=2147483648")
-                    .expect(400);
+                    .expect(422); // Semantic error - integer overflow
 
-                expect(response.body.error).toContain("page");
-                expect(response.body.error).toContain("2147483647");
+                expectErrorContains(response, "page");
+                expectErrorContains(response, "2147483647");
             });
         });
 
@@ -209,9 +221,9 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                                 precoUnitario: value
                             }]
                         })
-                        .expect(400);
+                        .expect(422); // Semantic error - decimal precision
 
-                    expect(response.body.error).toContain("decimal places");
+                    expectErrorContains(response, "decimal places");
                 }
             });
 
@@ -228,9 +240,9 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                             descontoItem: 5.123
                         }]
                     })
-                    .expect(400);
+                    .expect(422); // Semantic error - decimal precision
 
-                expect(response.body.error).toContain("decimal places");
+                expectErrorContains(response, "decimal places");
             });
         });
     });
@@ -251,10 +263,10 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                             precoUnitario: 10.00
                         }]
                     })
-                    .expect(400);
+                    .expect(422); // Semantic error - length limit
 
-                expect(response.body.error).toContain("codigo");
-                expect(response.body.error).toContain("50");
+                expectErrorContains(response, "codigo");
+                expectErrorContains(response, "50");
             });
 
             it("should reject nomeCliente exceeding max length (100)", async () => {
@@ -271,10 +283,10 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                             precoUnitario: 10.00
                         }]
                     })
-                    .expect(400);
+                    .expect(422); // Semantic error - length limit
 
-                expect(response.body.error).toContain("nomeCliente");
-                expect(response.body.error).toContain("100");
+                expectErrorContains(response, "nomeCliente");
+                expectErrorContains(response, "100");
             });
 
             it("should reject search query exceeding max length (255)", async () => {
@@ -282,10 +294,10 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
 
                 const response = await requestApp
                     .get(`/vendas?search=${encodeURIComponent(longString)}`)
-                    .expect(400);
+                    .expect(422); // Semantic error - length limit
 
-                expect(response.body.error).toContain("search");
-                expect(response.body.error).toContain("255");
+                expectErrorContains(response, "search");
+                expectErrorContains(response, "255");
             });
         });
     });
@@ -313,9 +325,9 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                                 precoUnitario: 10.00
                             }]
                         })
-                        .expect(400);
+                        .expect(422); // Semantic error - invalid characters
 
-                    expect(response.body.error).toContain("invalid characters");
+                    expectErrorContains(response, "invalid characters");
                 }
             });
 
@@ -331,17 +343,17 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                             precoUnitario: 10.00
                         }]
                     })
-                    .expect(400);
+                    .expect(422); // Semantic error - invalid characters
 
-                expect(response.body.error).toContain("invalid characters");
+                expectErrorContains(response, "invalid characters");
             });
 
             it("should reject XSS payloads in search query", async () => {
                 const response = await requestApp
                     .get(`/vendas?search=${encodeURIComponent("<script>alert('XSS')</script>")}`)
-                    .expect(400);
+                    .expect(422); // Semantic error - invalid characters
 
-                expect(response.body.error).toContain("invalid characters");
+                expectErrorContains(response, "invalid characters");
             });
         });
     });
@@ -365,8 +377,8 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                         })
                         .expect(400);
 
-                    expect(response.body.error).toContain("codigo");
-                    expect(response.body.error).toContain("string");
+                    expectErrorContains(response, "codigo");
+                    expectErrorContains(response, "string");
                 }
             });
 
@@ -389,8 +401,8 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                     // Should return 400 (validation) or 500 (if validation passes but service fails)
                     expect([400, 500]).toContain(response.status);
                     if (response.status === 400) {
-                        expect(response.body.error).toContain("produtoId");
-                        expect(response.body.error).toContain("integer");
+                        expectErrorContains(response, "produtoId");
+                        expectErrorContains(response, "integer");
                     }
                 }
             });
@@ -414,8 +426,8 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                     // Should return 400 (validation) or 500 (if validation passes but service fails)
                     expect([400, 500]).toContain(response.status);
                     if (response.status === 400) {
-                        expect(response.body.error).toContain("quantidade");
-                        expect(response.body.error).toContain("integer");
+                        expectErrorContains(response, "quantidade");
+                        expectErrorContains(response, "integer");
                     }
                 }
             });
@@ -439,7 +451,7 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                     // Should return 400 (validation) or 500 (if validation passes but service fails)
                     expect([400, 500]).toContain(response.status);
                     if (response.status === 400) {
-                        expect(response.body.error).toContain("precoUnitario");
+                        expectErrorContains(response, "precoUnitario");
                     }
                 }
             });
@@ -464,12 +476,13 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                 expect([400, 201]).toContain(response.status);
                 if (response.status === 400) {
                     // Validation passed (no integer overflow error), but product doesn't exist
-                    expect(response.body.error).toContain("not found");
+                    expectErrorContains(response, "not found");
                     // Should NOT contain validation error about integer range (should be business logic error)
                     // The ID in the error message is fine - it's a business logic error, not validation
                     // We check that it's NOT a validation error by ensuring it doesn't mention the range
-                    expect(response.body.error).not.toContain("integer between");
-                    expect(response.body.error).not.toMatch(/integer between \d+ and \d+/);
+                    const errorText = response.body.errors ? response.body.errors.map((e: any) => e.message).join(' ') : response.body.detail;
+                    expect(errorText).not.toContain("integer between");
+                    expect(errorText).not.toMatch(/integer between \d+ and \d+/);
                 }
             });
 
@@ -489,7 +502,8 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                 // Should succeed or fail for business logic, not validation
                 expect([201, 400]).toContain(response.status);
                 if (response.status === 400) {
-                    expect(response.body.error).not.toContain("2147483647");
+                    const errorText = response.body.errors ? response.body.errors.map((e: any) => e.message).join(' ') : response.body.detail;
+                    expect(errorText).not.toContain("2147483647");
                 }
             });
 
@@ -505,9 +519,9 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                             precoUnitario: 10.00
                         }]
                     })
-                    .expect(400);
+                    .expect(422); // Semantic error - value out of range
 
-                expect(response.body.error).toContain("quantidade");
+                expectErrorContains(response, "quantidade");
             });
 
             it("should reject zero quantidade", async () => {
@@ -522,9 +536,9 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                             precoUnitario: 10.00
                         }]
                     })
-                    .expect(400);
+                    .expect(422); // Semantic error - value out of range
 
-                expect(response.body.error).toContain("quantidade");
+                expectErrorContains(response, "quantidade");
             });
 
             it("should reject negative precoUnitario", async () => {
@@ -539,9 +553,9 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                             precoUnitario: -10.00
                         }]
                     })
-                    .expect(400);
+                    .expect(422); // Semantic error - value out of range
 
-                expect(response.body.error).toContain("precoUnitario");
+                expectErrorContains(response, "precoUnitario");
             });
         });
     });
@@ -559,10 +573,10 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                             nomeCliente: "Test",
                             itens: value
                         })
-                        .expect(400);
+                        .expect(422); // Semantic error - must be an array
 
-                    expect(response.body.error).toContain("itens");
-                    expect(response.body.error).toContain("array");
+                    expectErrorContains(response, "itens");
+                    expectErrorContains(response, "array");
                 }
             });
 
@@ -574,10 +588,10 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                         nomeCliente: "Test",
                         itens: []
                     })
-                    .expect(400);
+                    .expect(422); // Semantic error - at least one item
 
-                expect(response.body.error).toContain("itens");
-                expect(response.body.error).toContain("at least one item");
+                expectErrorContains(response, "itens");
+                expectErrorContains(response, "at least one item");
             });
         });
 
@@ -594,10 +608,10 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                 for (const date of invalidDates) {
                     const response = await requestApp
                         .get(`/vendas?dataInicio=${date}`)
-                        .expect(400);
+                        .expect(400); // Syntactic error - format error
 
-                    expect(response.body.error).toContain("dataInicio");
-                    expect(response.body.error).toContain("ISO 8601");
+                    expectErrorContains(response, "dataInicio");
+                    expectErrorContains(response, "ISO 8601");
                 }
             });
 
@@ -606,10 +620,12 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
 
                 for (const page of invalidPages) {
                     const response = await requestApp
-                        .get(`/vendas?page=${page}`)
-                        .expect(400);
-
-                    expect(response.body.error).toContain("page");
+                        .get(`/vendas?page=${page}`);
+                    
+                    // -1, 0 are semantic (422), "abc", 1.5, null are syntactic (400)
+                    const expectedStatus = (page === -1 || page === 0) ? 422 : 400;
+                    expect(response.status).toBe(expectedStatus);
+                    expectErrorContains(response, "page");
                 }
             });
 
@@ -618,43 +634,46 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
 
                 for (const limit of invalidLimits) {
                     const response = await requestApp
-                        .get(`/vendas?limit=${limit}`)
-                        .expect(400);
-
-                    expect(response.body.error).toContain("limit");
+                        .get(`/vendas?limit=${limit}`);
+                    
+                    // -1, 0, 101 are semantic (422), "abc", 1.5, null are syntactic (400)
+                    const expectedStatus = (limit === -1 || limit === 0 || limit === 101) ? 422 : 400;
+                    expect(response.status).toBe(expectedStatus);
+                    expectErrorContains(response, "limit");
                 }
             });
         });
     });
 
     describe("OWASP A01:2021 - Broken Access Control - Status Validation", () => {
-        it("should reject invalid status values", async () => {
-            const invalidStatuses = [
-                "Invalid",
-                "Hacked",
-                "'; DROP TABLE; --",
-                "<script>alert('XSS')</script>",
-                "Aberta' OR '1'='1",
-            ];
+            it("should reject invalid status values", async () => {
+                const invalidStatuses = [
+                    "Invalid",
+                    "Hacked",
+                    "'; DROP TABLE; --",
+                    "<script>alert('XSS')</script>",
+                    "Aberta' OR '1'='1",
+                ];
 
-            for (const status of invalidStatuses) {
-                const response = await requestApp
-                    .post("/vendas")
-                    .send({
-                        codigo: "VND-TEST",
-                        nomeCliente: "Test",
-                        status: status,
-                        itens: [{
-                            produtoId: produtoTeste.id,
-                            quantidade: 1,
-                            precoUnitario: 10.00
-                        }]
-                    })
-                    .expect(400);
-
-                expect(response.body.error).toContain("status");
-            }
-        });
+                for (const status of invalidStatuses) {
+                    const response = await requestApp
+                        .post("/vendas")
+                        .send({
+                            codigo: "VND-TEST",
+                            nomeCliente: "Test",
+                            status: status,
+                            itens: [{
+                                produtoId: produtoTeste.id,
+                                quantidade: 1,
+                                precoUnitario: 10.00
+                            }]
+                        });
+                    
+                    // Status with invalid characters is 422, invalid enum value is 422
+                    expect(response.status).toBe(422);
+                    expectErrorContains(response, "status");
+                }
+            });
 
         it("should accept valid status values", async () => {
             const validStatuses = ["Aberta", "Concluída", "Cancelada"];
@@ -676,39 +695,40 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                 // Should succeed or fail for business logic, not validation
                 expect([201, 400]).toContain(response.status);
                 if (response.status === 400) {
-                    expect(response.body.error).not.toContain("status");
+                    const errorText = response.body.errors ? response.body.errors.map((e: any) => e.message).join(' ') : response.body.detail;
+                    expect(errorText).not.toContain("status");
                 }
             }
         });
     });
 
     describe("OWASP A03:2021 - Command Injection Protection", () => {
-        it("should reject command injection in string fields", async () => {
-            const commandInjectionPayloads = [
-                "; ls -la",
-                "| cat /etc/passwd",
-                "&& rm -rf /",
-                "`whoami`",
-                "$(id)",
-            ];
+            it("should reject command injection in string fields", async () => {
+                const commandInjectionPayloads = [
+                    "; ls -la",
+                    "| cat /etc/passwd",
+                    "&& rm -rf /",
+                    "`whoami`",
+                    "$(id)",
+                ];
 
-            for (const payload of commandInjectionPayloads) {
-                const response = await requestApp
-                    .post("/vendas")
-                    .send({
-                        codigo: payload,
-                        nomeCliente: "Test",
-                        itens: [{
-                            produtoId: produtoTeste.id,
-                            quantidade: 1,
-                            precoUnitario: 10.00
-                        }]
-                    })
-                    .expect(400);
+                for (const payload of commandInjectionPayloads) {
+                    const response = await requestApp
+                        .post("/vendas")
+                        .send({
+                            codigo: payload,
+                            nomeCliente: "Test",
+                            itens: [{
+                                produtoId: produtoTeste.id,
+                                quantidade: 1,
+                                precoUnitario: 10.00
+                            }]
+                        })
+                        .expect(422); // Semantic error - invalid characters
 
-                expect(response.body.error).toContain("invalid characters");
-            }
-        });
+                    expectErrorContains(response, "invalid characters");
+                }
+            });
     });
 
     describe("OWASP A04:2021 - Insecure Design - Input Sanitization", () => {
@@ -729,22 +749,22 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
             expect([201, 422]).toContain(response.status);
         });
 
-        it("should reject strings with only whitespace", async () => {
-            const response = await requestApp
-                .post("/vendas")
-                .send({
-                    codigo: "   ",
-                    nomeCliente: "Test",
-                    itens: [{
-                        produtoId: produtoTeste.id,
-                        quantidade: 1,
-                        precoUnitario: 10.00
-                    }]
-                })
-                .expect(400);
+            it("should reject strings with only whitespace", async () => {
+                const response = await requestApp
+                    .post("/vendas")
+                    .send({
+                        codigo: "   ",
+                        nomeCliente: "Test",
+                        itens: [{
+                            produtoId: produtoTeste.id,
+                            quantidade: 1,
+                            precoUnitario: 10.00
+                        }]
+                    })
+                    .expect(422); // Semantic error - empty after trim (length validation)
 
-            expect(response.body.error).toContain("codigo");
-        });
+                expectErrorContains(response, "codigo");
+            });
     });
 });
 

@@ -12,7 +12,10 @@ app.use(express.json());
 app.use(logger('dev'));
 
 if (process.env.NODE_ENV !== 'test') {
-    ConnectServer();
+    ConnectServer().catch((error) => {
+        console.error('Failed to connect to database:', error);
+        process.exit(1);
+    });
 }
 
 app.use('/vendas', routerVenda);

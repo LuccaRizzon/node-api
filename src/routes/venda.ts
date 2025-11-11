@@ -18,4 +18,3 @@ router.put("/:id", validate([...validateId, ...validateUpdateVenda]), (req, res)
 router.delete("/:id", validate(validateId), (req, res) => vendaController.delete(req, res));
 
 export { router as routerVenda };
-
