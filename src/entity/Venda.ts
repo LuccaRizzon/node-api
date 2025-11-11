@@ -27,7 +27,7 @@ export class Venda {
     @Column({ type: "decimal", precision: 10, scale: 2, nullable: false, default: 0 })
     valorTotal: number;
 
-    @Column({ type: "enum", enum: StatusVenda, default: StatusVenda.ABERTA })
+    @Column({ type: "varchar", length: 20, nullable: false, default: StatusVenda.ABERTA })
     status: StatusVenda;
 
     @OneToMany(() => VendaItem, vendaItem => vendaItem.venda, { cascade: true })

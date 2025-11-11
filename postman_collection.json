@@ -1,245 +1,1395 @@
 {
 	"info": {
-		"_postman_id": "vendas-api-collection",
-		"name": "Vendas API",
-		"description": "Collection for testing the Sales Management API",
+		"_postman_id": "venda-api-collection",
+		"name": "Venda API - Collection",
+		"description": "Collection completa para testar todos os endpoints da API de Vendas",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
 		{
-			"name": "Criar Venda - Com Desconto na Venda",
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n    \"codigo\": \"VND-001\",\n    \"nomeCliente\": \"João Silva\",\n    \"descontoVenda\": 50.00,\n    \"status\": \"Aberta\",\n    \"itens\": [\n        {\n            \"produtoId\": 1,\n            \"quantidade\": 2,\n            \"precoUnitario\": 100.00\n        },\n        {\n            \"produtoId\": 2,\n            \"quantidade\": 1,\n            \"precoUnitario\": 150.00\n        }\n    ]\n}"
+			"name": "POST - Criar Venda",
+			"item": [
+				{
+					"name": "Criar Venda Sem Desconto",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"codigo\": \"VND-001\",\n  \"nomeCliente\": \"João Silva\",\n  \"itens\": [\n    {\n      \"produtoId\": 1,\n      \"quantidade\": 2,\n      \"precoUnitario\": 3500.00\n    }\n  ],\n  \"status\": \"Aberta\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vendas",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas"
+							]
+						},
+						"description": "Cria uma venda sem desconto. O sistema calcula automaticamente o valor total."
+					},
+					"response": []
 				},
-				"url": {
-					"raw": "http://localhost:3001/venda",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "3001",
-					"path": [
-						"venda"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Criar Venda - Com Desconto nos Itens",
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n    \"codigo\": \"VND-002\",\n    \"nomeCliente\": \"Maria Santos\",\n    \"status\": \"Aberta\",\n    \"itens\": [\n        {\n            \"produtoId\": 1,\n            \"quantidade\": 3,\n            \"precoUnitario\": 100.00,\n            \"descontoItem\": 20.00\n        },\n        {\n            \"produtoId\": 2,\n            \"quantidade\": 2,\n            \"precoUnitario\": 150.00,\n            \"descontoItem\": 30.00\n        }\n    ]\n}"
+				{
+					"name": "Criar Venda Com Desconto na Venda",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"codigo\": \"VND-002\",\n  \"nomeCliente\": \"Maria Santos\",\n  \"descontoVenda\": 100.00,\n  \"itens\": [\n    {\n      \"produtoId\": 2,\n      \"quantidade\": 3,\n      \"precoUnitario\": 450.00\n    },\n    {\n      \"produtoId\": 3,\n      \"quantidade\": 1,\n      \"precoUnitario\": 650.00\n    }\n  ],\n  \"status\": \"Aberta\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vendas",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas"
+							]
+						},
+						"description": "Cria uma venda com desconto na venda. O sistema rateia o desconto proporcionalmente entre os itens."
+					},
+					"response": []
 				},
-				"url": {
-					"raw": "http://localhost:3001/venda",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "3001",
-					"path": [
-						"venda"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Criar Venda - Sem Desconto",
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n    \"codigo\": \"VND-003\",\n    \"nomeCliente\": \"Pedro Oliveira\",\n    \"status\": \"Concluída\",\n    \"itens\": [\n        {\n            \"produtoId\": 1,\n            \"quantidade\": 1,\n            \"precoUnitario\": 100.00\n        }\n    ]\n}"
+				{
+					"name": "Criar Venda Com Desconto nos Itens",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"codigo\": \"VND-003\",\n  \"nomeCliente\": \"Pedro Oliveira\",\n  \"itens\": [\n    {\n      \"produtoId\": 4,\n      \"quantidade\": 1,\n      \"precoUnitario\": 1200.00,\n      \"descontoItem\": 50.00\n    },\n    {\n      \"produtoId\": 5,\n      \"quantidade\": 2,\n      \"precoUnitario\": 550.00,\n      \"descontoItem\": 30.00\n    }\n  ],\n  \"status\": \"Aberta\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vendas",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas"
+							]
+						},
+						"description": "Cria uma venda com desconto nos itens. O sistema soma os descontos dos itens e define como desconto da venda."
+					},
+					"response": []
 				},
-				"url": {
-					"raw": "http://localhost:3001/venda",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "3001",
-					"path": [
-						"venda"
-					]
+				{
+					"name": "Criar Venda Com Múltiplos Itens",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"codigo\": \"VND-004\",\n  \"nomeCliente\": \"Ana Costa\",\n  \"itens\": [\n    {\n      \"produtoId\": 1,\n      \"quantidade\": 1,\n      \"precoUnitario\": 3500.00\n    },\n    {\n      \"produtoId\": 4,\n      \"quantidade\": 1,\n      \"precoUnitario\": 1200.00\n    },\n    {\n      \"produtoId\": 6,\n      \"quantidade\": 1,\n      \"precoUnitario\": 750.00\n    },\n    {\n      \"produtoId\": 9,\n      \"quantidade\": 1,\n      \"precoUnitario\": 2500.00\n    }\n  ],\n  \"status\": \"Concluída\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vendas",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas"
+							]
+						},
+						"description": "Cria uma venda com múltiplos itens para testar o cálculo de totais."
+					},
+					"response": []
 				}
-			},
-			"response": []
+			],
+			"description": "Endpoints para criar vendas com diferentes cenários"
 		},
 		{
-			"name": "Listar Vendas - Todas",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://localhost:3001/venda",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "3001",
-					"path": [
-						"venda"
-					]
+			"name": "GET - Listar Vendas",
+			"item": [
+				{
+					"name": "Listar Todas as Vendas",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/vendas",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas"
+							]
+						},
+						"description": "Lista todas as vendas com paginação padrão (10 itens por página). Retorna também os totalizadores."
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Vendas Com Paginação",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/vendas?page=1&limit=5",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						},
+						"description": "Lista vendas com paginação customizada."
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Vendas Com Filtro de Data",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/vendas?dataInicio=2024-01-01&dataFim=2024-12-31",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas"
+							],
+							"query": [
+								{
+									"key": "dataInicio",
+									"value": "2024-01-01"
+								},
+								{
+									"key": "dataFim",
+									"value": "2024-12-31"
+								}
+							]
+						},
+						"description": "Lista vendas filtradas por período. Use o formato YYYY-MM-DD."
+					},
+					"response": []
+				},
+				{
+					"name": "Listar Vendas Com Paginação e Filtro",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/vendas?dataInicio=2024-01-01&dataFim=2024-12-31&page=1&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas"
+							],
+							"query": [
+								{
+									"key": "dataInicio",
+									"value": "2024-01-01"
+								},
+								{
+									"key": "dataFim",
+									"value": "2024-12-31"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Lista vendas com filtro de data e paginação."
+					},
+					"response": []
 				}
-			},
-			"response": []
+			],
+			"description": "Endpoints para listar vendas com diferentes filtros e paginação"
 		},
 		{
-			"name": "Listar Vendas - Com Paginação",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://localhost:3001/venda?page=1&limit=5",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "3001",
-					"path": [
-						"venda"
-					],
-					"query": [
+			"name": "GET - Buscar Venda por ID",
+			"item": [
+				{
+					"name": "Buscar Venda Por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/vendas/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "ID da venda"
+								}
+							]
+						},
+						"description": "Busca uma venda específica por ID, incluindo todos os itens e produtos relacionados."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoint para buscar uma venda específica"
+		},
+		{
+			"name": "PUT - Atualizar Venda",
+			"item": [
+				{
+					"name": "Atualizar Dados da Venda",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nomeCliente\": \"João Silva Atualizado\",\n  \"status\": \"Concluída\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vendas/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "ID da venda"
+								}
+							]
+						},
+						"description": "Atualiza apenas os dados da venda (nome do cliente, status, código)."
+					},
+					"response": []
+				},
+				{
+					"name": "Atualizar Venda Com Desconto",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"descontoVenda\": 150.00\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vendas/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "ID da venda"
+								}
+							]
+						},
+						"description": "Atualiza o desconto da venda. O sistema recalcula e rateia o desconto proporcionalmente entre os itens."
+					},
+					"response": []
+				},
+				{
+					"name": "Atualizar Itens da Venda",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"itens\": [\n    {\n      \"produtoId\": 7,\n      \"quantidade\": 2,\n      \"precoUnitario\": 800.00\n    },\n    {\n      \"produtoId\": 8,\n      \"quantidade\": 1,\n      \"precoUnitario\": 600.00\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vendas/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "ID da venda"
+								}
+							]
+						},
+						"description": "Atualiza os itens da venda. Os itens antigos são removidos e os novos são criados. Os totais são recalculados automaticamente."
+					},
+					"response": []
+				},
+				{
+					"name": "Atualizar Venda Completa",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"codigo\": \"VND-UPD-001\",\n  \"nomeCliente\": \"Cliente Atualizado\",\n  \"descontoVenda\": 200.00,\n  \"itens\": [\n    {\n      \"produtoId\": 1,\n      \"quantidade\": 1,\n      \"precoUnitario\": 3500.00\n    },\n    {\n      \"produtoId\": 10,\n      \"quantidade\": 2,\n      \"precoUnitario\": 400.00\n    }\n  ],\n  \"status\": \"Concluída\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vendas/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "ID da venda"
+								}
+							]
+						},
+						"description": "Atualiza todos os campos da venda de uma vez."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints para atualizar vendas com diferentes cenários"
+		},
+		{
+			"name": "DELETE - Deletar Venda",
+			"item": [
+				{
+					"name": "Deletar Venda",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/vendas/:id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas",
+								":id"
+							],
+							"variable": [
+								{
+									"key": "id",
+									"value": "1",
+									"description": "ID da venda"
+								}
+							]
+						},
+						"description": "Deleta uma venda e seus itens relacionados."
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoint para deletar uma venda"
+		},
+		{
+			"name": "Testes de Validação",
+			"item": [
+				{
+					"name": "Erro - Criar Venda Sem Código",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nomeCliente\": \"Cliente Teste\",\n  \"itens\": [\n    {\n      \"produtoId\": 1,\n      \"quantidade\": 1,\n      \"precoUnitario\": 100.00\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vendas",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas"
+							]
+						},
+						"description": "Testa validação de campo obrigatório - deve retornar erro 400"
+					},
+					"response": []
+				},
+				{
+					"name": "Erro - Criar Venda Sem Itens",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"codigo\": \"VND-ERR-001\",\n  \"nomeCliente\": \"Cliente Teste\",\n  \"itens\": []\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vendas",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas"
+							]
+						},
+						"description": "Testa validação de array vazio - deve retornar erro 400"
+					},
+					"response": []
+				},
+				{
+					"name": "Erro - Produto Não Existe",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"codigo\": \"VND-ERR-002\",\n  \"nomeCliente\": \"Cliente Teste\",\n  \"itens\": [\n    {\n      \"produtoId\": 99999,\n      \"quantidade\": 1,\n      \"precoUnitario\": 100.00\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/vendas",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas"
+							]
+						},
+						"description": "Testa validação de produto inexistente - deve retornar erro 400"
+					},
+					"response": []
+				},
+				{
+					"name": "Erro - Venda Não Existe",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/vendas/99999",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas",
+								"99999"
+							]
+						},
+						"description": "Testa busca de venda inexistente - deve retornar erro 404"
+					},
+					"response": []
+				},
+				{
+					"name": "Erro - ID Inválido",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/vendas/abc",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"vendas",
+								"abc"
+							]
+						},
+						"description": "Testa validação de ID inválido - deve retornar erro 400"
+					},
+					"response": []
+				}
+			],
+			"description": "Testes de validação e tratamento de erros"
+		},
+		{
+			"name": "OWASP Security Tests",
+			"item": [
+				{
+					"name": "A03:2021 - Injection Attacks",
+					"item": [
 						{
-							"key": "page",
-							"value": "1"
+							"name": "SQL Injection - codigo field",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"codigo\": \"'; DROP TABLE vendas; --\",\n  \"nomeCliente\": \"Test\",\n  \"itens\": [\n    {\n      \"produtoId\": 1,\n      \"quantidade\": 1,\n      \"precoUnitario\": 10.00\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/vendas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									]
+								},
+								"description": "OWASP A03:2021 - Tests SQL injection protection in codigo field. Should return 400 with validation error."
+							},
+							"response": []
 						},
 						{
-							"key": "limit",
-							"value": "5"
+							"name": "SQL Injection - nomeCliente field",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"codigo\": \"VND-TEST\",\n  \"nomeCliente\": \"'; DROP TABLE vendas; --\",\n  \"itens\": [\n    {\n      \"produtoId\": 1,\n      \"quantidade\": 1,\n      \"precoUnitario\": 10.00\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/vendas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									]
+								},
+								"description": "OWASP A03:2021 - Tests SQL injection protection in nomeCliente field. Should return 400."
+							},
+							"response": []
+						},
+						{
+							"name": "SQL Injection - search query",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/vendas?search='; DROP TABLE vendas; --",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									],
+									"query": [
+										{
+											"key": "search",
+											"value": "'; DROP TABLE vendas; --"
+										}
+									]
+								},
+								"description": "OWASP A03:2021 - Tests SQL injection protection in search query parameter. Should return 400."
+							},
+							"response": []
+						},
+						{
+							"name": "XSS - codigo field",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"codigo\": \"<script>alert('XSS')</script>\",\n  \"nomeCliente\": \"Test\",\n  \"itens\": [\n    {\n      \"produtoId\": 1,\n      \"quantidade\": 1,\n      \"precoUnitario\": 10.00\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/vendas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									]
+								},
+								"description": "OWASP A03:2021 - Tests XSS protection in codigo field. Should return 400."
+							},
+							"response": []
+						},
+						{
+							"name": "XSS - search query",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/vendas?search=<script>alert('XSS')</script>",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									],
+									"query": [
+										{
+											"key": "search",
+											"value": "<script>alert('XSS')</script>"
+										}
+									]
+								},
+								"description": "OWASP A03:2021 - Tests XSS protection in search query. Should return 400."
+							},
+							"response": []
+						},
+						{
+							"name": "Command Injection - codigo field",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"codigo\": \"VND-001; rm -rf /\",\n  \"nomeCliente\": \"Test\",\n  \"itens\": [\n    {\n      \"produtoId\": 1,\n      \"quantidade\": 1,\n      \"precoUnitario\": 10.00\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/vendas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									]
+								},
+								"description": "OWASP A03:2021 - Tests command injection protection. Should return 400."
+							},
+							"response": []
 						}
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Listar Vendas - Com Filtro de Período",
-			"request": {
-				"method": "GET",
-				"header": [],
-				"url": {
-					"raw": "http://localhost:3001/venda?dataInicio=2024-01-01&dataFim=2024-12-31&page=1&limit=10",
-					"protocol": "http",
-					"host": [
-						"localhost"
 					],
-					"port": "3001",
-					"path": [
-						"venda"
-					],
-					"query": [
+					"description": "OWASP A03:2021 - Injection Attacks (SQL, XSS, Command Injection)"
+				},
+				{
+					"name": "A01:2021 - Broken Access Control",
+					"item": [
 						{
-							"key": "dataInicio",
-							"value": "2024-01-01",
-							"description": "Data inicial no formato YYYY-MM-DD"
+							"name": "Invalid ID - Negative",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/vendas/-1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas",
+										"-1"
+									]
+								},
+								"description": "OWASP A01:2021 - Tests rejection of negative IDs. Should return 400."
+							},
+							"response": []
 						},
 						{
-							"key": "dataFim",
-							"value": "2024-12-31",
-							"description": "Data final no formato YYYY-MM-DD"
+							"name": "Invalid ID - Zero",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/vendas/0",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas",
+										"0"
+									]
+								},
+								"description": "OWASP A01:2021 - Tests rejection of zero as ID. Should return 400."
+							},
+							"response": []
 						},
 						{
-							"key": "page",
-							"value": "1"
+							"name": "Invalid ID - Non-numeric",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/vendas/abc",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas",
+										"abc"
+									]
+								},
+								"description": "OWASP A01:2021 - Tests rejection of non-numeric IDs. Should return 400."
+							},
+							"response": []
 						},
 						{
-							"key": "limit",
-							"value": "10"
+							"name": "Invalid Status Value",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"codigo\": \"VND-TEST\",\n  \"nomeCliente\": \"Test\",\n  \"status\": \"InvalidStatus\",\n  \"itens\": [\n    {\n      \"produtoId\": 1,\n      \"quantidade\": 1,\n      \"precoUnitario\": 10.00\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/vendas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									]
+								},
+								"description": "OWASP A01:2021 - Tests rejection of invalid status values. Should return 400."
+							},
+							"response": []
 						}
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Criar Venda - Erro (Produto Inexistente)",
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n    \"codigo\": \"VND-ERROR\",\n    \"nomeCliente\": \"Teste Erro\",\n    \"itens\": [\n        {\n            \"produtoId\": 999,\n            \"quantidade\": 1,\n            \"precoUnitario\": 100.00\n        }\n    ]\n}"
-				},
-				"url": {
-					"raw": "http://localhost:3001/venda",
-					"protocol": "http",
-					"host": [
-						"localhost"
 					],
-					"port": "3001",
-					"path": [
-						"venda"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "Criar Venda - Erro (Dados Inválidos)",
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n    \"codigo\": \"VND-INVALID\",\n    \"itens\": []\n}"
+					"description": "OWASP A01:2021 - Broken Access Control (ID and Status Validation)"
 				},
-				"url": {
-					"raw": "http://localhost:3001/venda",
-					"protocol": "http",
-					"host": [
-						"localhost"
+				{
+					"name": "A03:2021 - Data Exposure",
+					"item": [
+						{
+							"name": "Integer Overflow - produtoId",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"codigo\": \"VND-TEST\",\n  \"nomeCliente\": \"Test\",\n  \"itens\": [\n    {\n      \"produtoId\": 2147483648,\n      \"quantidade\": 1,\n      \"precoUnitario\": 10.00\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/vendas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									]
+								},
+								"description": "OWASP A03:2021 - Tests integer overflow protection for produtoId (exceeds MySQL INT max). Should return 400."
+							},
+							"response": []
+						},
+						{
+							"name": "Integer Overflow - quantidade",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"codigo\": \"VND-TEST\",\n  \"nomeCliente\": \"Test\",\n  \"itens\": [\n    {\n      \"produtoId\": 1,\n      \"quantidade\": 2147483648,\n      \"precoUnitario\": 10.00\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/vendas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									]
+								},
+								"description": "OWASP A03:2021 - Tests integer overflow protection for quantidade. Should return 400."
+							},
+							"response": []
+						},
+						{
+							"name": "Integer Overflow - page parameter",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/vendas?page=2147483648",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "2147483648"
+										}
+									]
+								},
+								"description": "OWASP A03:2021 - Tests integer overflow protection for page parameter. Should return 400."
+							},
+							"response": []
+						},
+						{
+							"name": "Decimal Precision - precoUnitario",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"codigo\": \"VND-TEST\",\n  \"nomeCliente\": \"Test\",\n  \"itens\": [\n    {\n      \"produtoId\": 1,\n      \"quantidade\": 1,\n      \"precoUnitario\": 10.123\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/vendas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									]
+								},
+								"description": "OWASP A03:2021 - Tests decimal precision protection (more than 2 decimal places). Should return 400."
+							},
+							"response": []
+						}
 					],
-					"port": "3001",
-					"path": [
-						"venda"
-					]
+					"description": "OWASP A03:2021 - Data Exposure (Integer Overflow, Decimal Precision)"
+				},
+				{
+					"name": "A07:2021 - Input Validation",
+					"item": [
+						{
+							"name": "String Length - codigo (exceeds 50)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"codigo\": \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\n  \"nomeCliente\": \"Test\",\n  \"itens\": [\n    {\n      \"produtoId\": 1,\n      \"quantidade\": 1,\n      \"precoUnitario\": 10.00\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/vendas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									]
+								},
+								"description": "OWASP A07:2021 - Tests string length validation for codigo (max 50 chars). Should return 400."
+							},
+							"response": []
+						},
+						{
+							"name": "String Length - nomeCliente (exceeds 100)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"codigo\": \"VND-TEST\",\n  \"nomeCliente\": \"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\n  \"itens\": [\n    {\n      \"produtoId\": 1,\n      \"quantidade\": 1,\n      \"precoUnitario\": 10.00\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/vendas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									]
+								},
+								"description": "OWASP A07:2021 - Tests string length validation for nomeCliente (max 100 chars). Should return 400."
+							},
+							"response": []
+						},
+						{
+							"name": "String Length - search query (exceeds 255)",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/vendas?search=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									],
+									"query": [
+										{
+											"key": "search",
+											"value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+										}
+									]
+								},
+								"description": "OWASP A07:2021 - Tests string length validation for search query (max 255 chars). Should return 400."
+							},
+							"response": []
+						}
+					],
+					"description": "OWASP A07:2021 - Input Validation (String Length Limits)"
+				},
+				{
+					"name": "A05:2021 - Type Validation",
+					"item": [
+						{
+							"name": "Type Validation - non-string codigo",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"codigo\": 12345,\n  \"nomeCliente\": \"Test\",\n  \"itens\": [\n    {\n      \"produtoId\": 1,\n      \"quantidade\": 1,\n      \"precoUnitario\": 10.00\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/vendas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									]
+								},
+								"description": "OWASP A05:2021 - Tests type validation (codigo must be string). Should return 400."
+							},
+							"response": []
+						},
+						{
+							"name": "Type Validation - non-integer produtoId",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"codigo\": \"VND-TEST\",\n  \"nomeCliente\": \"Test\",\n  \"itens\": [\n    {\n      \"produtoId\": \"abc\",\n      \"quantidade\": 1,\n      \"precoUnitario\": 10.00\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/vendas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									]
+								},
+								"description": "OWASP A05:2021 - Tests type validation (produtoId must be integer). Should return 400."
+							},
+							"response": []
+						},
+						{
+							"name": "Type Validation - non-float precoUnitario",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"codigo\": \"VND-TEST\",\n  \"nomeCliente\": \"Test\",\n  \"itens\": [\n    {\n      \"produtoId\": 1,\n      \"quantidade\": 1,\n      \"precoUnitario\": \"not-a-number\"\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/vendas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									]
+								},
+								"description": "OWASP A05:2021 - Tests type validation (precoUnitario must be float). Should return 400."
+							},
+							"response": []
+						},
+						{
+							"name": "Boundary Value - negative quantidade",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"codigo\": \"VND-TEST\",\n  \"nomeCliente\": \"Test\",\n  \"itens\": [\n    {\n      \"produtoId\": 1,\n      \"quantidade\": -1,\n      \"precoUnitario\": 10.00\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/vendas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									]
+								},
+								"description": "OWASP A05:2021 - Tests boundary value validation (negative quantidade). Should return 400."
+							},
+							"response": []
+						},
+						{
+							"name": "Boundary Value - zero quantidade",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"codigo\": \"VND-TEST\",\n  \"nomeCliente\": \"Test\",\n  \"itens\": [\n    {\n      \"produtoId\": 1,\n      \"quantidade\": 0,\n      \"precoUnitario\": 10.00\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/vendas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									]
+								},
+								"description": "OWASP A05:2021 - Tests boundary value validation (zero quantidade). Should return 400."
+							},
+							"response": []
+						},
+						{
+							"name": "Boundary Value - negative precoUnitario",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"codigo\": \"VND-TEST\",\n  \"nomeCliente\": \"Test\",\n  \"itens\": [\n    {\n      \"produtoId\": 1,\n      \"quantidade\": 1,\n      \"precoUnitario\": -10.00\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/vendas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									]
+								},
+								"description": "OWASP A05:2021 - Tests boundary value validation (negative precoUnitario). Should return 400."
+							},
+							"response": []
+						}
+					],
+					"description": "OWASP A05:2021 - Type Validation and Boundary Value Testing"
+				},
+				{
+					"name": "A08:2021 - Array Validation",
+					"item": [
+						{
+							"name": "Array Validation - non-array itens",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"codigo\": \"VND-TEST\",\n  \"nomeCliente\": \"Test\",\n  \"itens\": \"not-an-array\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/vendas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									]
+								},
+								"description": "OWASP A08:2021 - Tests array validation (itens must be array). Should return 400."
+							},
+							"response": []
+						},
+						{
+							"name": "Array Validation - empty itens",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"codigo\": \"VND-TEST\",\n  \"nomeCliente\": \"Test\",\n  \"itens\": []\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/vendas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									]
+								},
+								"description": "OWASP A08:2021 - Tests array validation (itens cannot be empty). Should return 400."
+							},
+							"response": []
+						},
+						{
+							"name": "Query Validation - invalid date format",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/vendas?dataInicio=2024-13-01",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									],
+									"query": [
+										{
+											"key": "dataInicio",
+											"value": "2024-13-01"
+										}
+									]
+								},
+								"description": "OWASP A08:2021 - Tests query parameter validation (invalid date format). Should return 400."
+							},
+							"response": []
+						},
+						{
+							"name": "Query Validation - invalid page value",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/vendas?page=abc",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									],
+									"query": [
+										{
+											"key": "page",
+											"value": "abc"
+										}
+									]
+								},
+								"description": "OWASP A08:2021 - Tests query parameter validation (page must be integer). Should return 400."
+							},
+							"response": []
+						},
+						{
+							"name": "Query Validation - invalid limit value",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/vendas?limit=101",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									],
+									"query": [
+										{
+											"key": "limit",
+											"value": "101"
+										}
+									]
+								},
+								"description": "OWASP A08:2021 - Tests query parameter validation (limit max 100). Should return 400."
+							},
+							"response": []
+						}
+					],
+					"description": "OWASP A08:2021 - Array Validation and Query Parameter Validation"
+				},
+				{
+					"name": "A04:2021 - Input Sanitization",
+					"item": [
+						{
+							"name": "Input Sanitization - whitespace trimming",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"codigo\": \"  VND-TEST  \",\n  \"nomeCliente\": \"  Test Client  \",\n  \"itens\": [\n    {\n      \"produtoId\": 1,\n      \"quantidade\": 1,\n      \"precoUnitario\": 10.00\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/vendas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									]
+								},
+								"description": "OWASP A04:2021 - Tests input sanitization (whitespace should be trimmed). Should succeed with trimmed values."
+							},
+							"response": []
+						},
+						{
+							"name": "Input Sanitization - only whitespace",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"codigo\": \"   \",\n  \"nomeCliente\": \"Test\",\n  \"itens\": [\n    {\n      \"produtoId\": 1,\n      \"quantidade\": 1,\n      \"precoUnitario\": 10.00\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/vendas",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"vendas"
+									]
+								},
+								"description": "OWASP A04:2021 - Tests input sanitization (strings with only whitespace should be rejected). Should return 400."
+							},
+							"response": []
+						}
+					],
+					"description": "OWASP A04:2021 - Input Sanitization (Whitespace Handling)"
 				}
-			},
-			"response": []
+			],
+			"description": "OWASP Top 10 2021 Security Tests - Comprehensive security testing based on OWASP best practices"
 		}
 	],
 	"variable": [
 		{
-			"key": "baseUrl",
+			"key": "base_url",
 			"value": "http://localhost:3001",
 			"type": "string"
 		}
 	]
 }
-

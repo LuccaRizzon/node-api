@@ -1,4 +1,4 @@
-import { AppDataSource } from "../data-source";
+import { TestDataSource } from "./test-data-source";
 import { Produto } from "../entity/Produto";
 import { Venda } from "../entity/Venda";
 import { VendaItem } from "../entity/VendaItem";
@@ -8,7 +8,7 @@ export async function createTestProduct(nome: string = "Produto Teste", preco: n
   const produto = new Produto();
   produto.nome = nome;
   produto.preco = preco;
-  return await AppDataSource.manager.save(Produto, produto);
+  return await TestDataSource.manager.save(Produto, produto);
 }
 
 export async function createTestSale(
@@ -19,7 +19,7 @@ export async function createTestSale(
   let produto: Produto;
   
   if (produtoId) {
-    produto = await AppDataSource.manager.findOne(Produto, { where: { id: produtoId } }) as Produto;
+    produto = await TestDataSource.manager.findOne(Produto, { where: { id: produtoId } }) as Produto;
   } else {
     produto = await createTestProduct();
   }
@@ -31,7 +31,7 @@ export async function createTestSale(
   venda.valorTotal = 0;
   venda.status = StatusVenda.ABERTA;
 
-  const vendaSalva = await AppDataSource.manager.save(Venda, venda);
+  const vendaSalva = await TestDataSource.manager.save(Venda, venda);
 
   const vendaItem = new VendaItem();
   vendaItem.venda = vendaSalva;
@@ -41,20 +41,20 @@ export async function createTestSale(
   vendaItem.descontoItem = 0;
   vendaItem.valorTotal = vendaItem.quantidade * vendaItem.precoUnitario;
 
-  await AppDataSource.manager.save(VendaItem, vendaItem);
+  await TestDataSource.manager.save(VendaItem, vendaItem);
 
   vendaSalva.valorTotal = vendaItem.valorTotal;
-  await AppDataSource.manager.save(Venda, vendaSalva);
+  await TestDataSource.manager.save(Venda, vendaSalva);
 
-  return await AppDataSource.manager.findOne(Venda, {
+  return await TestDataSource.manager.findOne(Venda, {
     where: { id: vendaSalva.id },
     relations: ["itens", "itens.produto"]
   }) as Venda;
 }
 
 export async function clearTestData(): Promise<void> {
-  await AppDataSource.manager.delete(VendaItem, {});
-  await AppDataSource.manager.delete(Venda, {});
-  await AppDataSource.manager.delete(Produto, {});
+  await TestDataSource.manager.delete(VendaItem, {});
+  await TestDataSource.manager.delete(Venda, {});
+  await TestDataSource.manager.delete(Produto, {});
 }
 

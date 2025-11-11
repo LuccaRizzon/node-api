@@ -1,10 +1,13 @@
 services:
   db:
     image: 'mysql:latest'
+    env_file:
+      - .env
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_DATABASE:-comercio}
     volumes:
-      - ${MYSQL_DATA_DIR}:/var/lib/mysql
+      - ${MYSQL_DATA_DIR:-./mysqldata}:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - "${MYSQL_PORT}:3306"
+      - "${DB_PORT:-3306}:3306"

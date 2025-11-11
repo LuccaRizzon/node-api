@@ -1,4 +1,4 @@
-import { AppDataSource } from "../data-source";
+import { getDataSource } from "../utils/getDataSource";
 import { Venda, StatusVenda } from "../entity/Venda";
 import { VendaItem } from "../entity/VendaItem";
 import { ProductCache } from "../utils/ProductCache";
@@ -31,6 +31,7 @@ export interface ListarVendasFiltros {
     dataFim?: string;
     page?: number;
     limit?: number;
+    search?: string;
 }
 
 export interface ListarVendasResultado {
@@ -74,7 +75,8 @@ export class VendaService {
     }
 
     async create(dto: CriarVendaDTO): Promise<Venda> {
-        const queryRunner = AppDataSource.createQueryRunner();
+        const dataSource = getDataSource();
+        const queryRunner = dataSource.createQueryRunner();
         await queryRunner.connect();
         await queryRunner.startTransaction();
 
@@ -114,7 +116,7 @@ export class VendaService {
 
             await queryRunner.commitTransaction();
 
-            const vendaCompleta = await AppDataSource.manager.findOne(Venda, {
+            const vendaCompleta = await dataSource.manager.findOne(Venda, {
                 where: { id: vendaSalva.id },
                 relations: ["itens", "itens.produto"]
             });
@@ -129,19 +131,37 @@ export class VendaService {
     }
 
     async list(filtros: ListarVendasFiltros): Promise<ListarVendasResultado> {
+        const dataSource = getDataSource();
         const pageNumber = filtros.page || 1;
         const limitNumber = filtros.limit || 10;
         const skip = (pageNumber - 1) * limitNumber;
 
-        const queryBuilder = AppDataSource.manager
+        const queryBuilder = dataSource.manager
             .getRepository(Venda)
             .createQueryBuilder("venda")
             .leftJoinAndSelect("venda.itens", "item")
             .leftJoinAndSelect("item.produto", "produto");
 
+        const whereConditions: string[] = [];
+        const queryParams: any = {};
+
         if (filtros.dataInicio && filtros.dataFim) {
-            queryBuilder.where("venda.dataHora >= :dataInicio", { dataInicio: filtros.dataInicio })
-                .andWhere("venda.dataHora <= :dataFim", { dataFim: filtros.dataFim });
+            whereConditions.push("venda.dataHora >= :dataInicio");
+            whereConditions.push("venda.dataHora <= :dataFim");
+            queryParams.dataInicio = filtros.dataInicio;
+            queryParams.dataFim = filtros.dataFim;
+        }
+
+        if (filtros.search && filtros.search.trim().length > 0) {
+            const searchTerm = `%${filtros.search.trim().toLowerCase()}%`;
+            whereConditions.push(
+                "(LOWER(venda.codigo) LIKE :search OR LOWER(venda.nomeCliente) LIKE :search OR LOWER(venda.status) LIKE :search)"
+            );
+            queryParams.search = searchTerm;
+        }
+
+        if (whereConditions.length > 0) {
+            queryBuilder.where(whereConditions.join(" AND "), queryParams);
         }
 
         const [vendas, total] = await queryBuilder
@@ -150,15 +170,19 @@ export class VendaService {
             .orderBy("venda.dataHora", "DESC")
             .getManyAndCount();
 
-        const totalizadores = await AppDataSource.manager
+        const totalizadoresQueryBuilder = dataSource.manager
             .getRepository(Venda)
             .createQueryBuilder("venda")
             .select("SUM(venda.valorTotal)", "valorTotal")
             .addSelect("COUNT(venda.id)", "numeroVendas")
             .leftJoin("venda.itens", "item")
-            .addSelect("SUM(item.quantidade)", "quantidadeItens")
-            .where(filtros.dataInicio && filtros.dataFim ? "venda.dataHora >= :dataInicio AND venda.dataHora <= :dataFim" : "1=1", { dataInicio: filtros.dataInicio, dataFim: filtros.dataFim })
-            .getRawOne();
+            .addSelect("SUM(item.quantidade)", "quantidadeItens");
+
+        if (whereConditions.length > 0) {
+            totalizadoresQueryBuilder.where(whereConditions.join(" AND "), queryParams);
+        }
+
+        const totalizadores = await totalizadoresQueryBuilder.getRawOne();
 
         return {
             vendas,
@@ -177,7 +201,8 @@ export class VendaService {
     }
 
     async findById(id: number): Promise<Venda> {
-        const venda = await AppDataSource.manager.findOne(Venda, {
+        const dataSource = getDataSource();
+        const venda = await dataSource.manager.findOne(Venda, {
             where: { id },
             relations: ["itens", "itens.produto"]
         });
@@ -190,7 +215,8 @@ export class VendaService {
     }
 
     async update(id: number, dto: AtualizarVendaDTO): Promise<Venda> {
-        const queryRunner = AppDataSource.createQueryRunner();
+        const dataSource = getDataSource();
+        const queryRunner = dataSource.createQueryRunner();
         await queryRunner.connect();
         await queryRunner.startTransaction();
 
@@ -203,6 +229,11 @@ export class VendaService {
             if (!venda) {
                 await queryRunner.rollbackTransaction();
                 throw new Error("Sale not found");
+            }
+
+            if (venda.status === StatusVenda.CONCLUIDA) {
+                await queryRunner.rollbackTransaction();
+                throw new Error("Cannot update a sale with status 'Concluída'. This is a finished status.");
             }
 
             if (dto.codigo) venda.codigo = dto.codigo;
@@ -260,7 +291,7 @@ export class VendaService {
             const vendaAtualizada = await queryRunner.manager.save(Venda, venda);
             await queryRunner.commitTransaction();
 
-            const vendaCompleta = await AppDataSource.manager.findOne(Venda, {
+            const vendaCompleta = await dataSource.manager.findOne(Venda, {
                 where: { id: vendaAtualizada.id },
                 relations: ["itens", "itens.produto"]
             });
@@ -275,7 +306,8 @@ export class VendaService {
     }
 
     async delete(id: number): Promise<void> {
-        const queryRunner = AppDataSource.createQueryRunner();
+        const dataSource = getDataSource();
+        const queryRunner = dataSource.createQueryRunner();
         await queryRunner.connect();
         await queryRunner.startTransaction();
 
@@ -287,6 +319,11 @@ export class VendaService {
             if (!venda) {
                 await queryRunner.rollbackTransaction();
                 throw new Error("Sale not found");
+            }
+
+            if (venda.status === StatusVenda.CONCLUIDA) {
+                await queryRunner.rollbackTransaction();
+                throw new Error("Cannot delete a sale with status 'Concluída'. This is a finished status.");
             }
 
             await queryRunner.manager.remove(Venda, venda);

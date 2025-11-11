@@ -44,7 +44,8 @@ DB_HOST=localhost
 DB_PORT=3306
 DB_USERNAME=root
 DB_PASSWORD=sua_senha
-DB_DATABASE=lucca
+DB_DATABASE=comercio
+MYSQL_DATA_DIR=./mysqldata
 
 # Configuração do Cache de Produtos
 # TTL do cache em milissegundos (padrão: 300000 = 5 minutos)
@@ -53,10 +54,10 @@ PRODUCT_CACHE_TTL_MS=300000
 
 ### 4. Crie o banco de dados
 
-Crie o banco de dados MySQL:
+#### Via Docker
 
-```sql
-CREATE DATABASE lucca;
+```bash
+docker-compose up -d
 ```
 
 ### 5. Execute as migrações
@@ -91,32 +92,6 @@ O servidor estará rodando em `http://localhost:3001`
 
 ```bash
 npm start
-```
-
-## Executando com Docker
-
-### 1. Inicie o banco de dados MySQL
-
-```bash
-docker-compose up -d
-```
-
-### 2. Execute as migrações
-
-```bash
-npm run migration:run
-```
-
-### 3. Popule o banco com dados iniciais (opcional)
-
-```bash
-npm run seed
-```
-
-### 4. Inicie a aplicação
-
-```bash
-npm run dev
 ```
 
 ## Estrutura do Projeto

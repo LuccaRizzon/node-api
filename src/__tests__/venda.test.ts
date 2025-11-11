@@ -2,7 +2,7 @@ import request from "supertest";
 import { app } from "../app";
 
 const requestApp = request(app as any);
-import { AppDataSource } from "../data-source";
+import { TestDataSource } from "./test-data-source";
 import { Produto } from "../entity/Produto";
 import { Venda } from "../entity/Venda";
 import { VendaItem } from "../entity/VendaItem";
@@ -18,7 +18,7 @@ describe("Venda API Endpoints", () => {
   });
 
   afterEach(async () => {
-    await AppDataSource.manager.delete(Venda, {});
+    await TestDataSource.manager.delete(Venda, {});
   });
 
   afterAll(async () => {
@@ -254,6 +254,62 @@ describe("Venda API Endpoints", () => {
       expect(response.body.totalizadores).toHaveProperty("quantidadeItens");
       expect(response.body.totalizadores.numeroVendas).toBeGreaterThanOrEqual(3);
     });
+
+    it("should search sales by codigo", async () => {
+      const response = await requestApp
+        .get("/vendas?search=VND-LIST-001")
+        .expect(200);
+
+      expect(response.body.vendas.length).toBeGreaterThanOrEqual(1);
+      expect(response.body.vendas.some((v: any) => v.codigo === "VND-LIST-001")).toBe(true);
+    });
+
+    it("should search sales by nomeCliente", async () => {
+      const response = await requestApp
+        .get("/vendas?search=Cliente 1")
+        .expect(200);
+
+      expect(response.body.vendas.length).toBeGreaterThanOrEqual(1);
+      expect(response.body.vendas.some((v: any) => v.nomeCliente === "Cliente 1")).toBe(true);
+    });
+
+    it("should search sales by status", async () => {
+      const response = await requestApp
+        .get("/vendas?search=Aberta")
+        .expect(200);
+
+      expect(response.body.vendas.length).toBeGreaterThanOrEqual(1);
+      expect(response.body.vendas.every((v: any) => v.status === StatusVenda.ABERTA)).toBe(true);
+    });
+
+    it("should perform case-insensitive search", async () => {
+      const response = await requestApp
+        .get("/vendas?search=cliente")
+        .expect(200);
+
+      expect(response.body.vendas.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it("should combine search with date filters", async () => {
+      const hoje = new Date().toISOString().split('T')[0];
+      const amanha = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+      const response = await requestApp
+        .get(`/vendas?dataInicio=${hoje}&dataFim=${amanha}&search=Cliente`)
+        .expect(200);
+
+      expect(response.body).toHaveProperty("vendas");
+      expect(response.body.vendas.length).toBeGreaterThanOrEqual(0);
+    });
+
+    it("should return empty results for non-matching search", async () => {
+      const response = await requestApp
+        .get("/vendas?search=NonExistentCode12345")
+        .expect(200);
+
+      expect(response.body.vendas.length).toBe(0);
+      expect(response.body.totalizadores.numeroVendas).toBe(0);
+    });
   });
 
   describe("GET /vendas/:id - Buscar Venda por ID", () => {
@@ -396,6 +452,25 @@ describe("Venda API Endpoints", () => {
 
       expect(response.body.error).toContain("Product");
     });
+
+    it("should return error 422 when trying to update a concluded sale", async () => {
+      // Create a concluded sale
+      const vendaConcluida = await createTestSale("VND-CONCL-001", "Cliente Concluido", produtoTeste.id);
+      vendaConcluida.status = StatusVenda.CONCLUIDA;
+      await TestDataSource.manager.save(Venda, vendaConcluida);
+
+      const updateData = {
+        nomeCliente: "Cliente Atualizado"
+      };
+
+      const response = await requestApp
+        .put(`/vendas/${vendaConcluida.id}`)
+        .send(updateData)
+        .expect(422);
+
+      expect(response.body.error).toContain("Concluída");
+      expect(response.body.error).toContain("finished status");
+    });
   });
 
   describe("DELETE /vendas/:id - Deletar Venda", () => {
@@ -410,7 +485,7 @@ describe("Venda API Endpoints", () => {
         .delete(`/vendas/${vendaCriada.id}`)
         .expect(204);
 
-      const vendaDeletada = await AppDataSource.manager.findOne(Venda, {
+      const vendaDeletada = await TestDataSource.manager.findOne(Venda, {
         where: { id: vendaCriada.id }
       });
 
@@ -432,11 +507,31 @@ describe("Venda API Endpoints", () => {
         .delete(`/vendas/${venda.id}`)
         .expect(204);
 
-      const itens = await AppDataSource.manager.find(VendaItem, {
+      const itens = await TestDataSource.manager.find(VendaItem, {
         where: { venda: { id: venda.id } }
       });
 
       expect(itens.length).toBe(0);
+    });
+
+    it("should return error 422 when trying to delete a concluded sale", async () => {
+      // Create a concluded sale
+      const vendaConcluida = await createTestSale("VND-DEL-CONCL-001", "Cliente Delete Concluido", produtoTeste.id);
+      vendaConcluida.status = StatusVenda.CONCLUIDA;
+      await TestDataSource.manager.save(Venda, vendaConcluida);
+
+      const response = await requestApp
+        .delete(`/vendas/${vendaConcluida.id}`)
+        .expect(422);
+
+      expect(response.body.error).toContain("Concluída");
+      expect(response.body.error).toContain("finished status");
+
+      // Verify the sale still exists
+      const vendaAindaExiste = await TestDataSource.manager.findOne(Venda, {
+        where: { id: vendaConcluida.id }
+      });
+      expect(vendaAindaExiste).not.toBeNull();
     });
   });
 });

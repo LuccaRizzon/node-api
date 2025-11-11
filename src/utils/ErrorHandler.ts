@@ -21,8 +21,44 @@ export class ErrorHandler {
         return lowerMessage.includes("product");
     }
 
+    private static isFinishedStatusError(errorMessage: string): boolean {
+        return errorMessage.toLowerCase().includes("finished status");
+    }
+
+    private static isDuplicateError(error: any): boolean {
+        return error?.code === 'ER_DUP_ENTRY' || error?.errno === 1062;
+    }
+
+    private static extractDuplicateField(errorMessage: string): string | null {
+        const match = errorMessage.match(/Duplicate entry '([^']+)'/i);
+
+        if (match && match[1]) {
+            return match[1];
+        }
+
+        return null;
+    }
+
     static handleError(res: Response, error: any, defaultMessage: string, defaultStatus: number = 500): Response {
         const errorMessage = this.getErrorMessage(error);
+
+        // Handle duplicate entry errors (422 Unprocessable Entity - OWASP)
+        if (this.isDuplicateError(error)) {
+            const duplicateValue = this.extractDuplicateField(errorMessage);
+            const message = duplicateValue 
+                ? `A sale with code '${duplicateValue}' already exists`
+                : "Duplicate entry: This record already exists";
+            
+            return res.status(422).json({
+                error: message
+            });
+        }
+
+        if (this.isFinishedStatusError(errorMessage)) {
+            return res.status(422).json({ 
+                error: errorMessage 
+            });
+        }
 
         if (this.isProductError(errorMessage)) {
             return res.status(400).json({ 
@@ -59,6 +95,12 @@ export class ErrorHandler {
         return res.status(500).json({
             error: "Internal server error",
             message
+        });
+    }
+
+    static unprocessableEntity(res: Response, message: string): Response {
+        return res.status(422).json({
+            error: message
         });
     }
 }
