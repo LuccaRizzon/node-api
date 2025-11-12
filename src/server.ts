@@ -4,7 +4,9 @@ import { app } from "./app";
 import { DisconnectServer } from "./config/db";
 import { disconnectRedis } from "./config/redis";
 
-const server = app.listen(3001, () => console.log('Server running on port 3001'));
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
+
+const server = app.listen(port, () => console.log(`Server running on port ${port}`));
 
 const gracefulShutdown = async (signal: string) => {
     console.log(`${signal} received. Shutting down gracefully...`);

@@ -3,11 +3,12 @@ import { Produto } from "../entity/Produto";
 import { Venda } from "../entity/Venda";
 import { VendaItem } from "../entity/VendaItem";
 import { StatusVenda } from "../entity/Venda";
+import { roundMoney, multiplyMoney } from "../utils/money";
 
 export async function createTestProduct(nome: string = "Produto Teste", preco: number = 100.00): Promise<Produto> {
   const produto = new Produto();
   produto.nome = nome;
-  produto.preco = preco;
+  produto.preco = roundMoney(preco);
   return await TestDataSource.manager.save(Produto, produto);
 }
 
@@ -27,8 +28,8 @@ export async function createTestSale(
   const venda = new Venda();
   venda.codigo = codigo;
   venda.nomeCliente = nomeCliente;
-  venda.descontoVenda = 0;
-  venda.valorTotal = 0;
+  venda.descontoVenda = roundMoney(0);
+  venda.valorTotal = roundMoney(0);
   venda.status = StatusVenda.ABERTA;
 
   const vendaSalva = await TestDataSource.manager.save(Venda, venda);
@@ -38,8 +39,8 @@ export async function createTestSale(
   vendaItem.produto = produto;
   vendaItem.quantidade = 2;
   vendaItem.precoUnitario = produto.preco;
-  vendaItem.descontoItem = 0;
-  vendaItem.valorTotal = vendaItem.quantidade * vendaItem.precoUnitario;
+  vendaItem.descontoItem = roundMoney(0);
+  vendaItem.valorTotal = multiplyMoney(vendaItem.precoUnitario, vendaItem.quantidade);
 
   await TestDataSource.manager.save(VendaItem, vendaItem);
 

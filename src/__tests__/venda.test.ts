@@ -165,7 +165,7 @@ describe("Venda API Endpoints", () => {
       expect(response.body.errors.some((e: any) => e.field === "itens" && e.message.includes("required"))).toBe(true);
     });
 
-    it("should return error 400 when product does not exist", async () => {
+    it("should return error 404 when product does not exist", async () => {
       const vendaData = {
         codigo: "VND-007",
         nomeCliente: "João Silva",
@@ -181,12 +181,13 @@ describe("Venda API Endpoints", () => {
       const response = await requestApp
         .post("/vendas")
         .send(vendaData)
-        .expect(400);
+        .expect(404);
 
-      expect(response.body.error).toContain("not found");
+      expect(response.body.code).toBe("PRODUCT_NOT_FOUND");
+      expect(response.body.detail).toContain("Product with ID 99999");
     });
 
-    it("should return error 422 when trying to create a duplicate sale code", async () => {
+    it("should return error 409 when trying to create a duplicate sale code", async () => {
       // First, create a sale with code "VND-DUP-001"
       const firstVendaData = {
         codigo: "VND-DUP-001",
@@ -221,11 +222,33 @@ describe("Venda API Endpoints", () => {
       const response = await requestApp
         .post("/vendas")
         .send(duplicateVendaData)
-        .expect(422); // Semantic error - duplicate entry
+        .expect(409); // Conflict for duplicate entry
 
       expect(response.body.detail).toContain("VND-DUP-001");
-      expect(response.body.detail).toContain("already exists");
-      expect(response.body.type).toContain("duplicate-entry");
+      expect(response.body.code).toBe("SALE_CODE_EXISTS");
+      expect(response.body.type).toContain("conflict");
+    });
+
+    it("should return error 422 when precoUnitario is zero", async () => {
+      const vendaData = {
+        codigo: "VND-INVALID-PRICE",
+        nomeCliente: "Cliente Teste",
+        itens: [
+          {
+            produtoId: produtoTeste.id,
+            quantidade: 1,
+            precoUnitario: 0
+          }
+        ]
+      };
+
+      const response = await requestApp
+        .post("/vendas")
+        .send(vendaData)
+        .expect(422);
+
+      expect(response.body.type).toContain("validation-error");
+      expect(response.body.errors.some((e: any) => e.message.includes("precoUnitario"))).toBe(true);
     });
   });
 
@@ -363,7 +386,8 @@ describe("Venda API Endpoints", () => {
         .get("/vendas/99999")
         .expect(404);
 
-      expect(response.body).toHaveProperty("error", "Sale not found");
+      expect(response.body.detail).toContain("Sale not found");
+      expect(response.body.code).toBe("SALE_NOT_FOUND");
     });
   });
 
@@ -450,10 +474,11 @@ describe("Venda API Endpoints", () => {
         .send(updateData)
         .expect(404);
 
-      expect(response.body).toHaveProperty("error", "Sale not found");
+      expect(response.body.detail).toContain("Sale not found");
+      expect(response.body.code).toBe("SALE_NOT_FOUND");
     });
 
-    it("should return error 400 when product does not exist in update", async () => {
+    it("should return error 404 when product does not exist in update", async () => {
       const updateData = {
         itens: [
           {
@@ -467,9 +492,10 @@ describe("Venda API Endpoints", () => {
       const response = await requestApp
         .put(`/vendas/${vendaCriada.id}`)
         .send(updateData)
-        .expect(400);
+        .expect(404);
 
-      expect(response.body.detail).toContain("Product");
+      expect(response.body.code).toBe("PRODUCT_NOT_FOUND");
+      expect(response.body.detail).toContain("Product with ID 99999");
     });
 
     it("should return error 422 when trying to update a concluded sale", async () => {
@@ -487,8 +513,24 @@ describe("Venda API Endpoints", () => {
         .send(updateData)
         .expect(422);
 
-      expect(response.body.detail).toContain("Concluída");
-      expect(response.body.detail).toContain("finished status");
+      expect(response.body.detail).toContain("Cannot update a sale with status 'Concluída'");
+      expect(response.body.code).toBe("SALE_FINALIZED");
+    });
+    it("should return error 422 when status transition is invalid", async () => {
+      const cancelResponse = await requestApp
+        .put(`/vendas/${vendaCriada.id}`)
+        .send({ status: StatusVenda.CANCELADA })
+        .expect(200);
+
+      expect(cancelResponse.body.status).toBe(StatusVenda.CANCELADA);
+
+      const reopenResponse = await requestApp
+        .put(`/vendas/${vendaCriada.id}`)
+        .send({ status: StatusVenda.ABERTA })
+        .expect(422);
+
+      expect(reopenResponse.body.code).toBe("INVALID_STATUS_TRANSITION");
+      expect(reopenResponse.body.detail).toContain("Invalid status transition");
     });
   });
 
@@ -516,7 +558,8 @@ describe("Venda API Endpoints", () => {
         .delete("/vendas/99999")
         .expect(404);
 
-      expect(response.body).toHaveProperty("error", "Sale not found");
+      expect(response.body.code).toBe("SALE_NOT_FOUND");
+      expect(response.body.detail).toContain("Sale not found");
     });
 
     it("should delete the sale items in cascade", async () => {
@@ -543,8 +586,8 @@ describe("Venda API Endpoints", () => {
         .delete(`/vendas/${vendaConcluida.id}`)
         .expect(422);
 
-      expect(response.body.detail).toContain("Concluída");
-      expect(response.body.detail).toContain("finished status");
+      expect(response.body.code).toBe("SALE_FINALIZED");
+      expect(response.body.detail).toContain("Cannot delete a sale with status 'Concluída'");
 
       // Verify the sale still exists
       const vendaAindaExiste = await TestDataSource.manager.findOne(Venda, {

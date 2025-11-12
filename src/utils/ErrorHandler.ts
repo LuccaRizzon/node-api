@@ -1,31 +1,8 @@
 import { Response } from "express";
 import { ValidationProblemDetails } from "../types/validation";
+import { AppError, ProblemDetails, conflictError } from "./AppError";
 
 export class ErrorHandler {
-    private static getErrorMessage(error: any): string {
-        if (error instanceof Error) {
-            return error.message;
-        }
-        if (error?.message) {
-            return error.message;
-        }
-        return String(error);
-    }
-
-    private static isNotFoundError(errorMessage: string): boolean {
-        const lowerMessage = errorMessage.toLowerCase();
-        return lowerMessage.includes("not found");
-    }
-
-    private static isProductError(errorMessage: string): boolean {
-        const lowerMessage = errorMessage.toLowerCase();
-        return lowerMessage.includes("product");
-    }
-
-    private static isFinishedStatusError(errorMessage: string): boolean {
-        return errorMessage.toLowerCase().includes("finished status");
-    }
-
     private static isDuplicateError(error: any): boolean {
         // MySQL duplicate entry errors
         if (error?.code === 'ER_DUP_ENTRY' || error?.errno === 1062) {
@@ -33,7 +10,7 @@ export class ErrorHandler {
         }
         
         // Generic unique constraint violation detection (database-agnostic)
-        const errorMessage = this.getErrorMessage(error);
+        const errorMessage = this.extractErrorMessage(error);
         if (errorMessage.includes('UNIQUE constraint') || 
             errorMessage.includes('duplicate key') ||
             errorMessage.includes('unique constraint')) {
@@ -63,100 +40,103 @@ export class ErrorHandler {
         return null;
     }
 
-    static handleError(res: Response, error: any, defaultMessage: string, defaultStatus: number = 500): Response {
-        const errorMessage = this.getErrorMessage(error);
-
-        // Handle duplicate entry errors (422 Unprocessable Entity - OWASP)
-        if (this.isDuplicateError(error)) {
-            // Try to get duplicate value from error object (attached by service)
-            let duplicateValue = error?.duplicateValue;
-            
-            // If not available, try to extract from error message
-            if (!duplicateValue) {
-                duplicateValue = this.extractDuplicateField(errorMessage);
-            }
-            
-            // For SQLite errors, try to extract the field name to provide better context
-            let message = "Duplicate entry: This record already exists";
-            if (duplicateValue) {
-                message = `A sale with code '${duplicateValue}' already exists`;
-            } else if (errorMessage.includes('codigo')) {
-                // SQLite error mentions the field name
-                message = "A sale with this code already exists";
-            }
-            
-            return res.status(422).json({
-                type: "https://api.example.com/problems/duplicate-entry",
-                title: "Unprocessable Entity",
-                status: 422,
-                detail: message,
-                error: message // Backward compatibility
-            });
+    private static extractErrorMessage(error: any): string {
+        if (error instanceof Error) {
+            return error.message;
         }
-
-        if (this.isFinishedStatusError(errorMessage)) {
-            return res.status(422).json({
-                type: "https://api.example.com/problems/business-rule-violation",
-                title: "Unprocessable Entity",
-                status: 422,
-                detail: errorMessage,
-                error: errorMessage // Backward compatibility
-            });
+        if (error?.message) {
+            return error.message;
         }
+        return String(error);
+    }
 
-        if (this.isProductError(errorMessage)) {
-            return res.status(400).json({
-                type: "https://api.example.com/problems/bad-request",
-                title: "Bad Request",
-                status: 400,
-                detail: errorMessage,
-                error: errorMessage // Backward compatibility
-            });
-        }
-
-        if (this.isNotFoundError(errorMessage)) {
-            return res.status(404).json({
-                type: "https://api.example.com/problems/not-found",
-                title: "Not Found",
-                status: 404,
-                detail: errorMessage,
-                error: errorMessage // Backward compatibility
-            });
-        }
-
-        return res.status(defaultStatus).json({
-            type: "https://api.example.com/problems/internal-server-error",
-            title: "Internal Server Error",
-            status: defaultStatus,
-            detail: defaultMessage,
-            error: defaultMessage, // Backward compatibility
-            details: errorMessage 
+    private static toProblemResponse(res: Response, problem: ProblemDetails): Response {
+        return res.status(problem.status).json({
+            type: problem.type,
+            title: problem.title,
+            status: problem.status,
+            detail: problem.detail,
+            code: problem.code,
+            errors: problem.errors ?? []
         });
     }
 
+    private static handleDuplicate(res: Response, error: any): Response {
+        const message = this.extractErrorMessage(error);
+        const duplicateValue = error?.duplicateValue ?? this.extractDuplicateField(message);
+
+        const detail = duplicateValue
+            ? `A sale with code '${duplicateValue}' already exists.`
+            : "A sale with this code already exists.";
+
+        return this.toProblemResponse(
+            res,
+            conflictError(detail, "SALE_CODE_EXISTS", {
+                errors: [
+                    {
+                        field: "codigo",
+                        message: detail
+                    }
+                ]
+            }).problem
+        );
+    }
+
+    static handleError(res: Response, error: any, defaultMessage: string, defaultStatus: number = 500): Response {
+        if (error instanceof AppError) {
+            return this.toProblemResponse(res, error.problem);
+        }
+
+        if (this.isDuplicateError(error)) {
+            return this.handleDuplicate(res, error);
+        }
+
+        this.logInternalError(error);
+
+        return this.toProblemResponse(
+            res,
+            {
+                type: "https://api.example.com/problems/internal-server-error",
+                title: "Internal Server Error",
+                status: defaultStatus,
+                detail: defaultMessage
+            }
+        );
+    }
+
     static badRequest(res: Response, message: string, customError?: string): Response {
-        return res.status(400).json({
-            error: customError || message
+        return this.toProblemResponse(res, {
+            type: "https://api.example.com/problems/bad-request",
+            title: "Bad Request",
+            status: 400,
+            detail: customError || message
         });
     }
 
     static notFound(res: Response, message: string = "Resource not found"): Response {
-        return res.status(404).json({
-            error: "Not found",
-            message
+        return this.toProblemResponse(res, {
+            type: "https://api.example.com/problems/not-found",
+            title: "Not Found",
+            status: 404,
+            detail: message
         });
     }
 
     static internalServerError(res: Response, message: string = "Internal server error"): Response {
-        return res.status(500).json({
-            error: "Internal server error",
-            message
+        return this.toProblemResponse(res, {
+            type: "https://api.example.com/problems/internal-server-error",
+            title: "Internal Server Error",
+            status: 500,
+            detail: message
         });
     }
 
     static unprocessableEntity(res: Response, message: string): Response {
-        return res.status(422).json({
-            error: message
+        return this.toProblemResponse(res, {
+            type: "https://api.example.com/problems/business-rule-violation",
+            title: "Unprocessable Entity",
+            status: 422,
+            detail: message
         });
     }
 
@@ -174,19 +154,19 @@ export class ErrorHandler {
             ? fieldErrors[0].message 
             : "One or more fields failed validation.";
         
-        const problemDetails: ValidationProblemDetails & { error?: string } = {
+        const problemDetails: ValidationProblemDetails = {
             type: "https://api.example.com/problems/validation-error",
             title: statusCode === 400 ? "Bad Request" : "Unprocessable Entity",
             status: statusCode,
             detail,
-            errors: fieldErrors,
-            // Backward compatibility: include 'error' property for existing tests
-            error: fieldErrors.length === 1 
-                ? `${fieldErrors[0].field}: ${fieldErrors[0].message}`
-                : `Validation failed: ${fieldErrors.map(e => `${e.field}: ${e.message}`).join('; ')}`
+            errors: fieldErrors
         };
 
         return res.status(statusCode).json(problemDetails);
+    }
+
+    private static logInternalError(error: any): void {
+        console.error("[ErrorHandler] Internal error", error);
     }
 }
 

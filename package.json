@@ -5,6 +5,7 @@
     "type": "commonjs",
     "devDependencies": {
         "@types/better-sqlite3": "^7.6.13",
+        "@types/big.js": "^6.2.2",
         "@types/dotenv": "^6.1.1",
         "@types/express": "^5.0.0",
         "@types/jest": "^30.0.0",
@@ -19,11 +20,13 @@
         "typescript": "4.5.2"
     },
     "dependencies": {
+        "big.js": "^7.0.1",
         "cors": "^2.8.5",
         "dotenv": "^17.2.3",
         "express": "^4.21.2",
         "express-rate-limit": "^8.2.1",
         "express-validator": "^7.3.0",
+        "helmet": "^8.1.0",
         "morgan": "^1.10.0",
         "mysql2": "^3.6.0",
         "redis": "^4.7.1",
@@ -41,6 +44,7 @@
         "migration:run": "typeorm-ts-node-commonjs migration:run -d src/data-source.ts",
         "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/data-source.ts",
         "migration:show": "typeorm-ts-node-commonjs migration:show -d src/data-source.ts",
-        "seed": "ts-node src/seed/seed.ts"
+        "seed": "ts-node src/seed/seed.ts",
+        "setup-db": "npm run migration:run && npm run seed"
     }
 }

@@ -9,8 +9,17 @@ export class Produto {
     @Column({ type: "varchar", length: 100, nullable: false })
     nome: string;
 
-    @Column({ type: "decimal", precision: 10, scale: 2, nullable: false })
-    preco: number;
+    @Column({
+        type: "decimal",
+        precision: 10,
+        scale: 2,
+        nullable: false,
+        transformer: {
+            to: (value: string | number) => value,
+            from: (value: string) => value
+        }
+    })
+    preco: string;
 
     @OneToMany(() => VendaItem, vendaItem => vendaItem.produto)
     vendaItens: VendaItem[];

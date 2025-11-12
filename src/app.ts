@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import logger from 'morgan';
+import helmet from 'helmet';
 
 import { ConnectServer } from './config/db';
 import { routerVenda } from './routes/venda';
@@ -8,6 +9,7 @@ import { apiRateLimiter } from './middleware/rateLimiter';
 
 export const app = express();
 
+app.use(helmet());
 app.use(cors());
 app.use(express.json());
 app.use(logger('dev'));

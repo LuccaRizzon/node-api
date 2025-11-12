@@ -18,13 +18,42 @@ export class VendaItem {
     @Column({ type: "int", nullable: false })
     quantidade: number;
 
-    @Column({ type: "decimal", precision: 10, scale: 2, nullable: false })
-    precoUnitario: number;
+    @Column({
+        type: "decimal",
+        precision: 10,
+        scale: 2,
+        nullable: false,
+        transformer: {
+            to: (value: string | number) => value,
+            from: (value: string) => value
+        }
+    })
+    precoUnitario: string;
 
-    @Column({ type: "decimal", precision: 10, scale: 2, nullable: false, default: 0 })
-    descontoItem: number;
+    @Column({
+        type: "decimal",
+        precision: 10,
+        scale: 2,
+        nullable: false,
+        default: 0,
+        transformer: {
+            to: (value: string | number) => value,
+            from: (value: string) => value
+        }
+    })
+    descontoItem: string;
 
-    @Column({ type: "decimal", precision: 10, scale: 2, nullable: false, default: 0 })
-    valorTotal: number;
+    @Column({
+        type: "decimal",
+        precision: 10,
+        scale: 2,
+        nullable: false,
+        default: 0,
+        transformer: {
+            to: (value: string | number) => value,
+            from: (value: string) => value
+        }
+    })
+    valorTotal: string;
 }
 

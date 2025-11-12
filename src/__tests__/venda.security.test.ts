@@ -471,18 +471,15 @@ describe("Venda API Security Tests (OWASP Best Practices)", () => {
                         }]
                     });
 
-                // Should fail because produtoId doesn't exist, but validation should pass
-                // The error message will contain the ID, which is expected for business logic errors
-                expect([400, 201]).toContain(response.status);
+                // Deve falhar porque o produto não existe, mas a validação deve aceitar o limite máximo
+                expect([400, 404, 201]).toContain(response.status);
                 if (response.status === 400) {
-                    // Validation passed (no integer overflow error), but product doesn't exist
-                    expectErrorContains(response, "not found");
-                    // Should NOT contain validation error about integer range (should be business logic error)
-                    // The ID in the error message is fine - it's a business logic error, not validation
-                    // We check that it's NOT a validation error by ensuring it doesn't mention the range
                     const errorText = response.body.errors ? response.body.errors.map((e: any) => e.message).join(' ') : response.body.detail;
                     expect(errorText).not.toContain("integer between");
                     expect(errorText).not.toMatch(/integer between \d+ and \d+/);
+                } else if (response.status === 404) {
+                    expect(response.body.code).toBe("PRODUCT_NOT_FOUND");
+                    expect(response.body.detail).toContain("2147483647");
                 }
             });
 

@@ -33,7 +33,7 @@ npm install
 
 ### 3. Configure as variáveis de ambiente
 
-Copie o arquivo `.env.example` para `.env` e configure as variáveis:
+Copie o arquivo `env.example` para `.env` e configure as variáveis:
 
 ```bash
 cp env.example .env
@@ -42,43 +42,37 @@ cp env.example .env
 Edite o arquivo `.env` com suas configurações:
 
 ```env
+# Aplicação
+PORT=3001
+
 # Configuração do Banco de Dados
 DB_HOST=localhost
 DB_PORT=3306
 DB_USERNAME=root
 DB_PASSWORD=sua_senha
-DB_DATABASE=comercio
+DB_DATABASE=salesdb
+# aliases aceitos
+DB_USER=root
+DB_PASS=sua_senha
+DB_NAME=salesdb
 DB_POOL_SIZE=10
 MYSQL_DATA_DIR=./mysqldata
 
 # Configuração do Cache de Produtos
-# TTL do cache em milissegundos (padrão: 300000 = 5 minutos)
 PRODUCT_CACHE_TTL_MS=300000
-# Tamanho máximo do cache (padrão: 1000 entradas)
 PRODUCT_CACHE_MAX_SIZE=1000
 PRODUCT_CACHE_KEY_PREFIX=product-cache:produto:
 PRODUCT_CACHE_LRU_KEY=product-cache:lru
 
 # Configuração do Redis
-# Informe REDIS_URL para sobrescrever host/porta (formato redis://user:pass@host:port)
-REDIS_HOST=127.0.0.1
-REDIS_PORT=6379
-# Usuário e senha são opcionais (Redis ACL)
+REDIS_URL=redis://127.0.0.1:6379
+REDIS_DISABLED=false
 REDIS_USERNAME=
 REDIS_PASSWORD=
-# REDIS_URL=redis://127.0.0.1:6379
-# Memória máxima usada pelo container Redis quando iniciado via docker-compose
 REDIS_MAX_MEMORY=128mb
-# Use true para desabilitar o Redis (ex.: ambientes de teste automatizados)
-REDIS_DISABLED=false
-
-# Configuração de Connection Pooling
-# Valores acima de 10 devem ser avaliados com sua infraestrutura
 
 # Configuração de Rate Limiting
-# Janela de tempo em milissegundos (padrão: 900000 = 15 minutos)
 RATE_LIMIT_WINDOW_MS=900000
-# Número máximo de requisições por janela (padrão: 100)
 RATE_LIMIT_MAX_REQUESTS=100
 ```
 
@@ -90,23 +84,15 @@ RATE_LIMIT_MAX_REQUESTS=100
 docker-compose up -d db redis
 ```
 
-### 5. Execute as migrações
+### 5. Execute as migrações e dados iniciais
 
-Execute as migrações para criar as tabelas:
-
-```bash
-npm run migration:run
-```
-
-### 6. Popule o banco com dados iniciais (opcional)
-
-Execute o seed para criar produtos iniciais para testes:
+O projeto disponibiliza um script único para criar a estrutura do banco e popular dados de exemplo:
 
 ```bash
-npm run seed
+npm run setup-db
 ```
 
-Isso criará 10 produtos de exemplo na tabela `produtos` que você pode usar para testar a criação de vendas.
+Esse comando executa `npm run migration:run` seguido de `npm run seed`, criando 10 produtos mockados que podem ser usados nas requisições.
 
 ## Executando o Projeto
 
@@ -147,6 +133,104 @@ node-api/
 ```
 
 ## Endpoints da API no postman collection de exemplo
+
+### Exemplos de payload
+
+**POST /vendas**
+
+```json
+{
+  "codigo": "VND-1001",
+  "nomeCliente": "Maria Ferreira",
+  "descontoVenda": 15.50,
+  "status": "Aberta",
+  "itens": [
+    {
+      "produtoId": 1,
+      "quantidade": 2,
+      "precoUnitario": 350.40
+    },
+    {
+      "produtoId": 4,
+      "quantidade": 1,
+      "precoUnitario": 1200.00,
+      "descontoItem": 50.00
+    }
+  ]
+}
+```
+
+Resposta `201 Created`:
+
+```json
+{
+  "id": 12,
+  "codigo": "VND-1001",
+  "dataHora": "2025-11-11T22:00:00.000Z",
+  "nomeCliente": "Maria Ferreira",
+  "descontoVenda": 115.50,
+  "valorTotal": 1785.30,
+  "status": "Aberta",
+  "itens": [
+    {
+      "id": 34,
+      "produtoId": 1,
+      "quantidade": 2,
+      "precoUnitario": 350.40,
+      "descontoItem": 65.50,
+      "valorTotal": 635.30,
+      "produto": {
+        "id": 1,
+        "nome": "Notebook Dell Inspiron",
+        "preco": 3500.00
+      }
+    },
+    {
+      "id": 35,
+      "produtoId": 4,
+      "quantidade": 1,
+      "precoUnitario": 1200.00,
+      "descontoItem": 50.00,
+      "valorTotal": 1150.00,
+      "produto": {
+        "id": 4,
+        "nome": "Monitor LG 27 polegadas",
+        "preco": 1200.00
+      }
+    }
+  ]
+}
+```
+
+**GET /vendas?page=1&limit=2**
+
+```json
+{
+  "vendas": [
+    {
+      "id": 12,
+      "codigo": "VND-1001",
+      "dataHora": "2025-11-11T22:00:00.000Z",
+      "nomeCliente": "Maria Ferreira",
+      "descontoVenda": 115.50,
+      "valorTotal": 1785.30,
+      "status": "Aberta",
+      "itens": [...]
+    }
+  ],
+  "paginacao": {
+    "page": 1,
+    "limit": 2,
+    "total": 12,
+    "totalPages": 6
+  },
+  "totalizadores": {
+    "valorTotal": 35670.20,
+    "numeroVendas": 12,
+    "quantidadeItens": 48
+  }
+}
+```
 
 ## Regras de Negócio
 
@@ -322,6 +406,7 @@ Os testes de segurança estão localizados em `src/__tests__/venda.security.test
 - `npm run migration:revert` - Reverte a última migração
 - `npm run migration:show` - Mostra o status das migrações
 - `npm run seed` - Popula o banco de dados com produtos iniciais para testes
+- `npm run setup-db` - Executa migrações e popula o banco em um único comando
 
 ## Códigos de Status HTTP
 
@@ -339,7 +424,17 @@ Todas as mensagens de erro são retornadas em inglês no seguinte formato:
 
 ```json
 {
-  "error": "Mensagem de erro descritiva"
+  "type": "https://api.example.com/problems/conflict",
+  "title": "Conflict",
+  "status": 409,
+  "code": "SALE_CODE_EXISTS",
+  "detail": "Sale code 'VND-1001' already exists.",
+  "errors": [
+    {
+      "field": "codigo",
+      "message": "Sale code 'VND-1001' already exists."
+    }
+  ]
 }
 ```
 
@@ -358,6 +453,7 @@ Todas as mensagens de erro são retornadas em inglês no seguinte formato:
 - Sanitização automática de entrada
 - Proteção contra SQL Injection, XSS, Command Injection e Integer Overflow
 - Graceful shutdown para fechamento adequado de conexões
+- Headers de segurança com `helmet` habilitado por padrão
 
 ### Performance e Escalabilidade
 
@@ -381,7 +477,12 @@ Todas as mensagens de erro são retornadas em inglês no seguinte formato:
 - **Benefício**: Limita o uso de memória, compartilha cache entre instâncias e mantém dados consistentes após deploys
 - **Fallback**: Defina `REDIS_DISABLED=true` em ambientes onde o Redis não esteja disponível (ex.: testes automatizados)
 
-#### 4. Índices de Performance
+#### 4. Cálculos monetários precisos
+- **Implementado**: Utilização de `big.js` e utilitários em `utils/money.ts`
+- **Benefício**: Evita erros de arredondamento com ponto flutuante e garante a soma exata de descontos e totais
+- **Detalhes**: Rateio do desconto da venda distribui o valor proporcionalmente e ajusta centavos residuais no último item
+
+#### 5. Índices de Performance
 - **Implementado**: Índices estratégicos para as consultas mais frequentes
 - **Índices adicionados via migração**:
   - `IDX_VENDAS_DATAHORA`: Ordenação e filtros por data (`ORDER BY dataHora DESC`)
@@ -389,7 +490,15 @@ Todas as mensagens de erro são retornadas em inglês no seguinte formato:
   - `IDX_VENDAS_NOMECLIENTE`: Apoia filtros por nome do cliente
   - `IDX_VENDAS_FULLTEXT_SEARCH`: Índice FULLTEXT em `codigo` + `nomeCliente` para busca textual
 
-***ESTE É UM SAMPLE DE ESCALABILIDADE, EM PRODUÇÃO REAL IRIA SER DIFERENTE E MAIS ESTRUTURADO***
+#### 6. Busca full-text otimizada
+- **Implementado**: Consultas `MATCH ... AGAINST` em modo booleano para `codigo` e `nomeCliente`
+- **Relevância**: Resultados são ordenados por relevância antes da ordenação por data
+- **Controle inteligente**: Quando o termo pesquisado tem menos de 3 caracteres o sistema retorna ao `LIKE`
+
+#### 7. Logging Condicional
+- **Implementado**: Logging habilitado apenas em desenvolvimento
+- **Benefício**: Reduz overhead em produção
+- **Configuração**: `logging: process.env.NODE_ENV === 'development'`
 
 ## Estrutura do Banco de Dados
 
@@ -415,10 +524,6 @@ Todas as mensagens de erro são retornadas em inglês no seguinte formato:
 - `id` (PK, auto-incremento)
 - `nome`
 - `preco`
-
-## Suporte
-
-Para dúvidas ou problemas, entre em contato através do email: patrick@domagestao.com.br
 
 ## Licença
 

@@ -21,11 +21,31 @@ export class Venda {
     @Column({ type: "varchar", length: 100, nullable: false })
     nomeCliente: string;
 
-    @Column({ type: "decimal", precision: 10, scale: 2, nullable: false, default: 0 })
-    descontoVenda: number;
+    @Column({
+        type: "decimal",
+        precision: 10,
+        scale: 2,
+        nullable: false,
+        default: 0,
+        transformer: {
+            to: (value: string | number) => value,
+            from: (value: string) => value
+        }
+    })
+    descontoVenda: string;
 
-    @Column({ type: "decimal", precision: 10, scale: 2, nullable: false, default: 0 })
-    valorTotal: number;
+    @Column({
+        type: "decimal",
+        precision: 10,
+        scale: 2,
+        nullable: false,
+        default: 0,
+        transformer: {
+            to: (value: string | number) => value,
+            from: (value: string) => value
+        }
+    })
+    valorTotal: string;
 
     @Column({ type: "varchar", length: 20, nullable: false, default: StatusVenda.ABERTA })
     status: StatusVenda;

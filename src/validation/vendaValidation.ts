@@ -157,9 +157,9 @@ export const validateCreateVenda = [
             }
             return true;
         })
-        .isFloat({ min: 0, max: 99999999.99 })
+        .isFloat({ min: 0.01, max: 99999999.99 })
         .withMessage(createValidationMessage(
-            'Each item must have a valid precoUnitario (decimal between 0 and 99999999.99)',
+            'Each item must have a valid precoUnitario (decimal greater than 0 and up to 99999999.99)',
             'semantic'
         ))
         .custom((value) => {
@@ -261,9 +261,9 @@ export const validateUpdateVenda = [
             }
             return true;
         })
-        .isFloat({ min: 0, max: 99999999.99 })
+        .isFloat({ min: 0.01, max: 99999999.99 })
         .withMessage(createValidationMessage(
-            'Each item must have a valid precoUnitario (decimal between 0 and 99999999.99)',
+            'Each item must have a valid precoUnitario (decimal greater than 0 and up to 99999999.99)',
             'semantic'
         ))
         .custom((value) => {

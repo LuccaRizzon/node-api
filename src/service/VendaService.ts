@@ -3,63 +3,32 @@ import { Venda, StatusVenda } from "../entity/Venda";
 import { VendaItem } from "../entity/VendaItem";
 import { ProductCache } from "../utils/ProductCache";
 import { toVendaDTO } from "../dto/VendaDTO";
+import { AtualizarVendaDTO, CriarVendaDTO, CriarVendaItemDTO, ListarVendasFiltros } from "../dto/VendaInputDTO";
+import { calculateSaleTotals, SaleCalculationRequest } from "./saleCalculations";
+import { AppError, businessRuleError, conflictError, notFoundError } from "../utils/AppError";
+import { ZERO, roundMoney } from "../utils/money";
 
-export interface CriarVendaDTO {
-    codigo: string;
-    nomeCliente: string;
-    descontoVenda?: number;
-    itens: CriarVendaItemDTO[];
-    status?: StatusVenda;
-}
+const STATUS_TRANSITIONS: Record<StatusVenda, StatusVenda[]> = {
+    [StatusVenda.ABERTA]: [StatusVenda.CONCLUIDA, StatusVenda.CANCELADA],
+    [StatusVenda.CONCLUIDA]: [],
+    [StatusVenda.CANCELADA]: []
+};
 
-export interface CriarVendaItemDTO {
-    produtoId: number;
-    quantidade: number;
-    precoUnitario: number;
-    descontoItem?: number;
-}
-
-export interface AtualizarVendaDTO {
-    codigo?: string;
-    nomeCliente?: string;
-    descontoVenda?: number;
-    itens?: CriarVendaItemDTO[];
-    status?: StatusVenda;
-}
-
-export interface ListarVendasFiltros {
-    dataInicio?: string;
-    dataFim?: string;
-    page?: number;
-    limit?: number;
-    search?: string;
-}
+const isAllowedStatusTransition = (current: StatusVenda, next?: StatusVenda): boolean => {
+    if (!next || current === next) {
+        return true;
+    }
+    return STATUS_TRANSITIONS[current]?.includes(next) ?? false;
+};
 
 export class VendaService {
-    private calcularDescontoItens(vendaItens: VendaItem[], descontoVenda: number): void {
-        const totalSemDesconto = vendaItens.reduce((sum, item) => {
-            return sum + (item.quantidade * item.precoUnitario);
-        }, 0);
-
-        vendaItens.forEach(item => {
-            const valorItemSemDesconto = item.quantidade * item.precoUnitario;
-            const proporcao = valorItemSemDesconto / totalSemDesconto;
-            item.descontoItem = descontoVenda * proporcao;
-            item.valorTotal = valorItemSemDesconto - item.descontoItem;
-        });
-    }
-
-    private calcularTotais(venda: Venda, vendaItens: VendaItem[]): void {
-        if (venda.descontoVenda && venda.descontoVenda > 0) {
-            this.calcularDescontoItens(vendaItens, venda.descontoVenda);
-        } else {
-            const totalDescontoItens = vendaItens.reduce((sum, item) => sum + (item.descontoItem || 0), 0);
-            venda.descontoVenda = totalDescontoItens;
-        }
-
-        venda.valorTotal = vendaItens.reduce((sum, item) => sum + item.valorTotal, 0);
-    }
-
+    /**
+     * Creates a new sale using transactional persistence and precise monetary calculations.
+     *
+     * @param dto Payload for creating a sale
+     * @returns VendaDTO representation of the created sale
+     * @throws AppError when business rules or database constraints are violated
+     */
     async create(dto: CriarVendaDTO) {
         const dataSource = getDataSource();
         const queryRunner = dataSource.createQueryRunner();
@@ -70,33 +39,58 @@ export class VendaService {
             const venda = new Venda();
             venda.codigo = dto.codigo;
             venda.nomeCliente = dto.nomeCliente;
-            venda.descontoVenda = dto.descontoVenda || 0;
+            venda.descontoVenda = roundMoney(dto.descontoVenda ?? ZERO);
             venda.status = dto.status || StatusVenda.ABERTA;
 
             const vendaItens: VendaItem[] = [];
+            const calculationRequest: SaleCalculationRequest = {
+                descontoVenda: dto.descontoVenda ?? ZERO,
+                itens: []
+            };
 
-            for (const item of dto.itens) {
+            for (let index = 0; index < dto.itens.length; index++) {
+                const item = dto.itens[index];
                 const produto = await ProductCache.get(item.produtoId, queryRunner);
                 if (!produto) {
-                    await queryRunner.rollbackTransaction();
-                    throw new Error(`Product with ID ${item.produtoId} not found`);
+                    throw notFoundError(
+                        `Product with ID ${item.produtoId} was not found.`,
+                        "PRODUCT_NOT_FOUND",
+                        {
+                            errors: [
+                                {
+                                    field: `itens[${index}].produtoId`,
+                                    message: `Product with ID ${item.produtoId} was not found.`
+                                }
+                            ]
+                        }
+                    );
                 }
 
                 const vendaItem = new VendaItem();
                 vendaItem.venda = venda;
                 vendaItem.produto = produto;
                 vendaItem.quantidade = item.quantidade;
-                vendaItem.precoUnitario = item.precoUnitario;
-                vendaItem.descontoItem = item.descontoItem || 0;
-
-                const valorItem = vendaItem.quantidade * vendaItem.precoUnitario;
-                vendaItem.valorTotal = valorItem - vendaItem.descontoItem;
-
                 vendaItens.push(vendaItem);
+
+                calculationRequest.itens.push({
+                    produtoId: produto.id,
+                    quantidade: item.quantidade,
+                    precoUnitario: item.precoUnitario,
+                    descontoItem: item.descontoItem ?? ZERO
+                });
             }
 
-            this.calcularTotais(venda, vendaItens);
+            const calculation = calculateSaleTotals(calculationRequest);
+            venda.descontoVenda = calculation.descontoVenda;
+            venda.valorTotal = calculation.valorTotal;
             venda.itens = vendaItens;
+
+            calculation.itens.forEach((calcItem, index) => {
+                const item = vendaItens[index];
+                item.precoUnitario = calcItem.precoUnitario;
+                item.descontoItem = calcItem.descontoItem;
+                item.valorTotal = calcItem.valorTotal;
+            });
 
             const vendaSalva = await queryRunner.manager.save(Venda, venda);
             const itensSalvos = await queryRunner.manager.save(VendaItem, vendaItens);
@@ -107,23 +101,35 @@ export class VendaService {
             return toVendaDTO(vendaSalva);
         } catch (error: any) {
             await queryRunner.rollbackTransaction().catch(() => {});
-            console.error("Error creating sale:", error);
-            // Attach the codigo to the error for better duplicate error messages
-            // Database-agnostic: check for any unique constraint violation
-            const errorMessage = error?.message || '';
-            if (error && (error.code === 'ER_DUP_ENTRY' || error.errno === 1062 || 
-                errorMessage.includes('UNIQUE constraint') ||
-                errorMessage.includes('duplicate key') ||
-                errorMessage.includes('unique constraint'))) {
-                error.duplicateField = 'codigo';
-                error.duplicateValue = dto.codigo;
+
+            if (this.isDuplicateError(error)) {
+                throw conflictError(
+                    `Sale code '${dto.codigo}' already exists.`,
+                    "SALE_CODE_EXISTS",
+                    {
+                        errors: [
+                            {
+                                field: "codigo",
+                                message: `Sale code '${dto.codigo}' already exists.`
+                            }
+                        ]
+                    }
+                );
             }
+
+            if (error instanceof AppError) {
+                throw error;
+            }
+
             throw error;
         } finally {
             await queryRunner.release();
         }
     }
 
+    /**
+     * Retrieves a paginated list of sales with optional date range and search filters.
+     */
     async list(filtros: ListarVendasFiltros) {
         const dataSource = getDataSource();
         const pageNumber = filtros.page || 1;
@@ -224,6 +230,9 @@ export class VendaService {
         };
     }
 
+    /**
+     * Finds a sale by ID.
+     */
     async findById(id: number) {
         const dataSource = getDataSource();
         const venda = await dataSource.manager.findOne(Venda, {
@@ -232,12 +241,15 @@ export class VendaService {
         });
 
         if (!venda) {
-            throw new Error("Sale not found");
+            throw notFoundError("Sale not found.", "SALE_NOT_FOUND");
         }
 
         return toVendaDTO(venda);
     }
 
+    /**
+     * Updates a sale and its items ensuring transactional integrity.
+     */
     async update(id: number, dto: AtualizarVendaDTO) {
         const dataSource = getDataSource();
         const queryRunner = dataSource.createQueryRunner();
@@ -247,68 +259,111 @@ export class VendaService {
         try {
             const venda = await queryRunner.manager.findOne(Venda, {
                 where: { id },
-                relations: ["itens"]
+                relations: ["itens", "itens.produto"]
             });
 
             if (!venda) {
-                await queryRunner.rollbackTransaction();
-                throw new Error("Sale not found");
+                throw notFoundError("Sale not found.", "SALE_NOT_FOUND");
             }
 
             if (venda.status === StatusVenda.CONCLUIDA) {
-                await queryRunner.rollbackTransaction();
-                throw new Error("Cannot update a sale with status 'Concluída'. This is a finished status.");
+                throw businessRuleError(
+                    "Cannot update a sale with status 'Concluída'.",
+                    "SALE_FINALIZED"
+                );
             }
 
-            if (dto.codigo) venda.codigo = dto.codigo;
-            if (dto.nomeCliente) venda.nomeCliente = dto.nomeCliente;
-            if (dto.status) venda.status = dto.status;
+            if (dto.codigo) {
+                venda.codigo = dto.codigo;
+            }
+
+            if (dto.nomeCliente) {
+                venda.nomeCliente = dto.nomeCliente;
+            }
+
+            if (dto.status) {
+                if (!isAllowedStatusTransition(venda.status, dto.status)) {
+                    throw businessRuleError(
+                        `Invalid status transition from '${venda.status}' to '${dto.status}'.`,
+                        "INVALID_STATUS_TRANSITION"
+                    );
+                }
+                venda.status = dto.status;
+            }
 
             if (dto.itens && Array.isArray(dto.itens) && dto.itens.length > 0) {
                 await queryRunner.manager.remove(VendaItem, venda.itens);
 
                 const vendaItens: VendaItem[] = [];
+                const calculationRequest: SaleCalculationRequest = {
+                    descontoVenda: dto.descontoVenda ?? ZERO,
+                    itens: []
+                };
 
-                for (const item of dto.itens) {
+                for (let index = 0; index < dto.itens.length; index++) {
+                    const item = dto.itens[index];
                     const produto = await ProductCache.get(item.produtoId, queryRunner);
                     if (!produto) {
-                        await queryRunner.rollbackTransaction();
-                        throw new Error(`Product with ID ${item.produtoId} not found`);
+                        throw notFoundError(
+                            `Product with ID ${item.produtoId} was not found.`,
+                            "PRODUCT_NOT_FOUND",
+                            {
+                                errors: [
+                                    {
+                                        field: `itens[${index}].produtoId`,
+                                        message: `Product with ID ${item.produtoId} was not found.`
+                                    }
+                                ]
+                            }
+                        );
                     }
 
                     const vendaItem = new VendaItem();
                     vendaItem.venda = venda;
                     vendaItem.produto = produto;
                     vendaItem.quantidade = item.quantidade;
-                    vendaItem.precoUnitario = item.precoUnitario;
-                    vendaItem.descontoItem = item.descontoItem || 0;
-
-                    const valorItem = vendaItem.quantidade * vendaItem.precoUnitario;
-                    vendaItem.valorTotal = valorItem - vendaItem.descontoItem;
-
                     vendaItens.push(vendaItem);
+
+                    calculationRequest.itens.push({
+                        produtoId: produto.id,
+                        quantidade: item.quantidade,
+                        precoUnitario: item.precoUnitario,
+                        descontoItem: item.descontoItem ?? ZERO
+                    });
                 }
 
-                if (dto.descontoVenda !== undefined && dto.descontoVenda > 0) {
-                    this.calcularDescontoItens(vendaItens, dto.descontoVenda);
-                    venda.descontoVenda = dto.descontoVenda;
-                } else if (dto.descontoVenda === 0) {
-                    venda.descontoVenda = 0;
-                } else {
-                    const totalDescontoItens = vendaItens.reduce((sum, item) => sum + (item.descontoItem || 0), 0);
-                    venda.descontoVenda = totalDescontoItens;
-                }
-
-                venda.valorTotal = vendaItens.reduce((sum, item) => sum + item.valorTotal, 0);
+                const calculation = calculateSaleTotals(calculationRequest);
+                venda.descontoVenda = calculation.descontoVenda;
+                venda.valorTotal = calculation.valorTotal;
+                calculation.itens.forEach((calcItem, index) => {
+                    const item = vendaItens[index];
+                    item.precoUnitario = calcItem.precoUnitario;
+                    item.descontoItem = calcItem.descontoItem;
+                    item.valorTotal = calcItem.valorTotal;
+                });
                 const itensAtualizados = await queryRunner.manager.save(VendaItem, vendaItens);
                 venda.itens = itensAtualizados;
             } else if (dto.descontoVenda !== undefined) {
-                venda.descontoVenda = dto.descontoVenda;
-                if (venda.itens && venda.itens.length > 0) {
-                    this.calcularDescontoItens(venda.itens, dto.descontoVenda);
-                    venda.valorTotal = venda.itens.reduce((sum, item) => sum + item.valorTotal, 0);
-                    await queryRunner.manager.save(VendaItem, venda.itens);
-                }
+                const calculation = calculateSaleTotals({
+                    descontoVenda: dto.descontoVenda ?? ZERO,
+                    itens: venda.itens.map((item) => ({
+                        produtoId: item.produto?.id,
+                        quantidade: item.quantidade,
+                        precoUnitario: item.precoUnitario,
+                        descontoItem: item.descontoItem
+                    }))
+                });
+
+                venda.descontoVenda = calculation.descontoVenda;
+                venda.valorTotal = calculation.valorTotal;
+
+                calculation.itens.forEach((calcItem, index) => {
+                    const item = venda.itens[index];
+                    item.descontoItem = calcItem.descontoItem;
+                    item.valorTotal = calcItem.valorTotal;
+                });
+
+                await queryRunner.manager.save(VendaItem, venda.itens);
             }
 
             const vendaAtualizada = await queryRunner.manager.save(Venda, venda);
@@ -318,15 +373,37 @@ export class VendaService {
             await queryRunner.commitTransaction();
 
             return toVendaDTO(vendaAtualizada);
-        } catch (error) {
+        } catch (error: any) {
             await queryRunner.rollbackTransaction().catch(() => {});
-            console.error("Error updating sale:", error);
+
+            if (this.isDuplicateError(error) && dto.codigo) {
+                throw conflictError(
+                    `Sale code '${dto.codigo}' already exists.`,
+                    "SALE_CODE_EXISTS",
+                    {
+                        errors: [
+                            {
+                                field: "codigo",
+                                message: `Sale code '${dto.codigo}' already exists.`
+                            }
+                        ]
+                    }
+                );
+            }
+
+            if (error instanceof AppError) {
+                throw error;
+            }
+
             throw error;
         } finally {
             await queryRunner.release();
         }
     }
 
+    /**
+     * Deletes a sale using a transaction and business-rule validation.
+     */
     async delete(id: number): Promise<void> {
         const dataSource = getDataSource();
         const queryRunner = dataSource.createQueryRunner();
@@ -339,13 +416,14 @@ export class VendaService {
             });
 
             if (!venda) {
-                await queryRunner.rollbackTransaction();
-                throw new Error("Sale not found");
+                throw notFoundError("Sale not found.", "SALE_NOT_FOUND");
             }
 
             if (venda.status === StatusVenda.CONCLUIDA) {
-                await queryRunner.rollbackTransaction();
-                throw new Error("Cannot delete a sale with status 'Concluída'. This is a finished status.");
+                throw businessRuleError(
+                    "Cannot delete a sale with status 'Concluída'.",
+                    "SALE_FINALIZED"
+                );
             }
 
             await queryRunner.manager.remove(Venda, venda);
@@ -356,6 +434,17 @@ export class VendaService {
         } finally {
             await queryRunner.release();
         }
+    }
+
+    private isDuplicateError(error: any): boolean {
+        return error?.code === "ER_DUP_ENTRY" ||
+            error?.errno === 1062 ||
+            (typeof error?.message === "string" &&
+                (
+                    error.message.includes("UNIQUE constraint") ||
+                    error.message.includes("duplicate key") ||
+                    error.message.includes("unique constraint")
+                ));
     }
 }
 
