@@ -55,3 +55,15 @@ Os testes checam cálculos monetários, regras de status, busca, duplicidade e p
 
 ---
 Projeto feito para o desafio de backend de Vendas.
+
+### Escalabilidade na prática
+
+Para uma versão realmente voltada a produção, eu partiria para:
+- **Horizontalizar a API** atrás de um balanceador, sentado em múltiplas instâncias.
+- **Quebrar responsabilidades** (ex.: um serviço focado em pricing/cálculos, outro em catálogo de produtos), comunicando via filas como SQS/RabbitMQ.
+- **Aprimorar o cache** com política de invalidação por evento (ex.: Redis + stream/Kafka) e métricas expostas (Prometheus + Grafana).
+- **Ciclos assíncronos** para tarefas pesadas (recalcular estoque, conciliação de pagamentos) usando workers.
+- **Observabilidade real**: traces distribuídos, logs estruturados, alarms.
+- **CI/CD e IaC** (pipelines GitHub Actions) para manter o ambiente reproduzível.
+
+Hoje a arquitetura atende bem ao escopo do desafio, mas essas seriam as etapas que eu seguiria para escalar melhor em produção.

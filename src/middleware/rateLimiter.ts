@@ -11,8 +11,7 @@ export const apiRateLimiter = rateLimit({
         type: "https://api.example.com/problems/rate-limit-exceeded",
         title: "Too Many Requests",
         status: 429,
-        detail: "Too many requests from this IP, please try again later.",
-        error: "Too many requests from this IP, please try again later." // Backward compatibility
+        detail: "Too many requests from this IP, please try again later."
     },
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers

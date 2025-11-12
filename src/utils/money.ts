@@ -56,10 +56,6 @@ export const maxMoney = (a: MoneyInput, b: MoneyInput): string => {
     return toBigMoney(a).cmp(toBigMoney(b)) >= 0 ? roundMoney(a) : roundMoney(b);
 };
 
-export const minMoney = (a: MoneyInput, b: MoneyInput): string => {
-    return toBigMoney(a).cmp(toBigMoney(b)) <= 0 ? roundMoney(a) : roundMoney(b);
-};
-
 export const isMoneyGreaterThan = (a: MoneyInput, b: MoneyInput): boolean => {
     return toBigMoney(a).gt(toBigMoney(b));
 };

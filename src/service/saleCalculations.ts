@@ -7,8 +7,7 @@ import {
     ZERO,
     toBigMoney,
     MoneyInput,
-    isMoneyGreaterThan,
-    minMoney
+    isMoneyGreaterThan
 } from "../utils/money";
 
 export interface SaleItemInput {
@@ -120,7 +119,6 @@ export const calculateSaleTotals = (input: SaleCalculationRequest): SaleCalculat
             item.valorTotal = valorTotal;
         });
     } else {
-        // Sum item-level discounts to determine sale discount
         const descontoTotal = items.reduce<string>((acc, item) => addMoney(acc, item.descontoItem), ZERO);
         descontoVenda = clampDiscount(descontoTotal, totalBruto);
     }
@@ -134,5 +132,3 @@ export const calculateSaleTotals = (input: SaleCalculationRequest): SaleCalculat
         totalBruto
     };
 };
-
-

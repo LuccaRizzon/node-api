@@ -26,14 +26,9 @@ export class ErrorHandler {
         if (match && match[1]) {
             return match[1];
         }
-        
-        // SQLite format: "UNIQUE constraint failed: vendas.codigo"
-        // Extract from the error message or try to get it from the request context
-        // For SQLite, we'll need to extract from a different pattern or use a generic message
+
         match = errorMessage.match(/UNIQUE constraint failed: \w+\.(\w+)/i);
         if (match) {
-            // For SQLite, we can't extract the value directly, but we know it's a duplicate
-            // We'll return null and use a generic message
             return null;
         }
 
@@ -143,7 +138,6 @@ export class ErrorHandler {
     /**
      * Returns validation errors in RFC 7807 Problem Details format
      * Following OWASP best practices for structured error responses
-     * Also includes backward-compatible 'error' property for existing tests
      */
     static validationError(
         res: Response, 
@@ -169,4 +163,3 @@ export class ErrorHandler {
         console.error("[ErrorHandler] Internal error", error);
     }
 }
-

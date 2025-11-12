@@ -23,7 +23,7 @@ const buildProblem = (
     options: Partial<ProblemDetails> = {}
 ): ProblemDetails => {
     return {
-        type: options.type ?? "https://api.example.com/problems/internal-error",
+        type: options.type ?? "https://api.example.com/problems/internal-error (SAMPLE ERROR TYPE, em uma api real é um url fallback válido)",
         title: options.title ?? "Error",
         status,
         detail,
@@ -39,7 +39,7 @@ export const conflictError = (
 ): AppError => {
     return new AppError(
         buildProblem(409, detail, {
-            type: "https://api.example.com/problems/conflict",
+            type: "https://api.example.com/problems/conflict (SAMPLE ERROR TYPE, em uma api real é um url fallback válido)",
             title: "Conflict",
             code,
             ...options
@@ -54,7 +54,7 @@ export const businessRuleError = (
 ): AppError => {
     return new AppError(
         buildProblem(422, detail, {
-            type: "https://api.example.com/problems/business-rule-violation",
+            type: "https://api.example.com/problems/business-rule-violation (SAMPLE ERROR TYPE, em uma api real é um url fallback válido)",
             title: "Unprocessable Entity",
             code,
             ...options
@@ -69,7 +69,7 @@ export const notFoundError = (
 ): AppError => {
     return new AppError(
         buildProblem(404, detail, {
-            type: "https://api.example.com/problems/not-found",
+            type: "https://api.example.com/problems/not-found (SAMPLE ERROR TYPE, em uma api real é um url fallback válido)",
             title: "Not Found",
             code,
             ...options
@@ -84,7 +84,7 @@ export const badRequestError = (
 ): AppError => {
     return new AppError(
         buildProblem(400, detail, {
-            type: "https://api.example.com/problems/bad-request",
+            type: "https://api.example.com/problems/bad-request (SAMPLE ERROR TYPE, em uma api real é um url fallback válido)",
             title: "Bad Request",
             code,
             ...options
@@ -97,7 +97,7 @@ export const internalServerError = (
 ): AppError => {
     return new AppError(
         buildProblem(500, detail, {
-            type: "https://api.example.com/problems/internal-server-error",
+            type: "https://api.example.com/problems/internal-server-error (SAMPLE ERROR TYPE, em uma api real é um url fallback válido)",
             title: "Internal Server Error"
         })
     );

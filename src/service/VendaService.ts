@@ -136,7 +136,8 @@ export class VendaService {
     async list(filtros: ListarVendasFiltros) {
         const dataSource = getDataSource();
         const pageNumber = filtros.page || 1;
-        const limitNumber = filtros.limit || 10;
+        const limitInput = filtros.limit || 10;
+        const limitNumber = Math.min(Math.max(limitInput, 1), 100);
         const skip = (pageNumber - 1) * limitNumber;
 
         const queryBuilder = dataSource.manager
