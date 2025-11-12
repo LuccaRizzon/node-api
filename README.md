@@ -14,10 +14,10 @@ Pequena API em Node.js/TypeScript para cadastrar vendas, seus itens e totais já
 git clone ...
 cd node-api
 npm install
-cp env.example .env         # ajuste suas variáveis
-docker-compose up -d db redis  # ou a sua infra
-npm run setup-db            # migra + seeds
-npm run dev                 # http://localhost:3001
+cp env.example .env         # a maioria das variáveis aqui tem fallback, pois servem mais para ilustrar um design escalável
+docker-compose up -d db redis
+npm run setup-db
+npm run dev
 ```
 
 Scripts úteis:
