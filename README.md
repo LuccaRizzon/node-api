@@ -67,3 +67,5 @@ Para uma versão realmente voltada a produção, eu partiria para:
 - **CI/CD e IaC** (pipelines GitHub Actions) para manter o ambiente reproduzível.
 
 Hoje a arquitetura atende bem ao escopo do desafio, mas essas seriam as etapas que eu seguiria para escalar melhor em produção.
+Atualmente, ao atualizar registros é feito delete/create para simplicidade e atomicidade, caso existisse a necessidade de auditoria, teria de ser 
+implementado através de update por ID com lógica mais complexa, mas para este caso simples não foi preciso.
