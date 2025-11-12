@@ -114,6 +114,14 @@ export class ProductCache {
         });
     }
 
+    static async store(id: number, product: Produto): Promise<void> {
+        const now = Date.now();
+        const cachedInRedis = await this.cacheInRedis(id, product, now);
+        if (!cachedInRedis || this.fallbackEnabled) {
+            this.cacheInFallback(id, product, now);
+        }
+    }
+
     private static async getFromRedis(id: number): Promise<Produto | null> {
         const client = await this.tryGetRedisClient();
         if (!client) {
@@ -174,13 +182,45 @@ export class ProductCache {
             return null;
         }
 
-        const now = Date.now();
-        const cachedInRedis = await this.cacheInRedis(id, product, now);
-        if (!cachedInRedis || this.fallbackEnabled) {
-            this.cacheInFallback(id, product, now);
+        await this.store(id, product);
+        return product;
+    }
+
+    static async getMany(ids: number[], queryRunner?: QueryRunner): Promise<Map<number, Produto>> {
+        const uniqueIds = Array.from(new Set(ids));
+        const result = new Map<number, Produto>();
+        const missing: number[] = [];
+
+        for (const id of uniqueIds) {
+            const cachedRedis = await this.getFromRedis(id);
+            if (cachedRedis) {
+                result.set(id, cachedRedis);
+                continue;
+            }
+
+            const cachedFallback = this.getFromFallback(id);
+            if (cachedFallback) {
+                result.set(id, cachedFallback);
+                continue;
+            }
+
+            missing.push(id);
         }
 
-        return product;
+        if (missing.length > 0) {
+            const manager = queryRunner?.manager || getDataSource().manager;
+            const produtos = await manager
+                .createQueryBuilder(Produto, "produto")
+                .where("produto.id IN (:...ids)", { ids: missing })
+                .getMany();
+
+            for (const produto of produtos) {
+                result.set(produto.id, produto);
+                await this.store(produto.id, produto);
+            }
+        }
+
+        return result;
     }
 
     static async invalidate(id: number): Promise<void> {

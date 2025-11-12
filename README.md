@@ -1,530 +1,57 @@
-# API de Gerenciamento de Vendas
+# API de Vendas
 
-API REST desenvolvida em Node.js com TypeScript para gerenciamento de vendas, incluindo criação, listagem, atualização e exclusão de vendas com seus respectivos itens.
+Pequena API em Node.js/TypeScript para cadastrar vendas, seus itens e totais já calculados. Tudo roda com MySQL + TypeORM, cacheia produtos no Redis e expõe respostas no formato RFC 7807.
 
-## Tecnologias Utilizadas
+## Conteúdo
+- Node.js, Express, TypeORM e MySQL
+- Redis para cache de produtos (LRU + TTL, com fallback in-memory)
+- `big.js` para dinheiro com floats
+- Helmet, rate limiting e validações com `express-validator`
+- Testes com Jest + Supertest (funcionais e de segurança)
 
-- **Node.js** com **TypeScript**
-- **Express.js** - Framework web
-- **TypeORM** - ORM para banco de dados
-- **MySQL** - Banco de dados relacional
-- **Redis** - Cache distribuído para produtos
-- **Jest** - Framework de testes
-- **Supertest** - Testes de integração
-- **express-validator** - Validação e sanitização de entrada
-- **express-rate-limit** - Rate limiting para proteção da API
-
-## Pré-requisitos
-
-- Node.js (versão 16 ou superior)
-- npm ou yarn
-- MySQL ou MariaDB (versão 5.7 ou superior)
-- Git
-
-## Instalação
-
-### 1. Clone o repositório
-
-### 2. Instale as dependências
-
+## Como rodar
 ```bash
+git clone ...
+cd node-api
 npm install
+cp env.example .env         # ajuste suas variáveis
+docker-compose up -d db redis  # ou a sua infra
+npm run setup-db            # migra + seeds
+npm run dev                 # http://localhost:3001
 ```
 
-### 3. Configure as variáveis de ambiente
-
-Copie o arquivo `env.example` para `.env` e configure as variáveis:
-
-```bash
-cp env.example .env
-```
-
-Edite o arquivo `.env` com suas configurações:
-
-```env
-# Aplicação
-PORT=3001
-
-# Configuração do Banco de Dados
-DB_HOST=localhost
-DB_PORT=3306
-DB_USERNAME=root
-DB_PASSWORD=sua_senha
-DB_DATABASE=salesdb
-# aliases aceitos
-DB_USER=root
-DB_PASS=sua_senha
-DB_NAME=salesdb
-DB_POOL_SIZE=10
-MYSQL_DATA_DIR=./mysqldata
-
-# Configuração do Cache de Produtos
-PRODUCT_CACHE_TTL_MS=300000
-PRODUCT_CACHE_MAX_SIZE=1000
-PRODUCT_CACHE_KEY_PREFIX=product-cache:produto:
-PRODUCT_CACHE_LRU_KEY=product-cache:lru
-
-# Configuração do Redis
-REDIS_URL=redis://127.0.0.1:6379
-REDIS_DISABLED=false
-REDIS_USERNAME=
-REDIS_PASSWORD=
-REDIS_MAX_MEMORY=128mb
-
-# Configuração de Rate Limiting
-RATE_LIMIT_WINDOW_MS=900000
-RATE_LIMIT_MAX_REQUESTS=100
-```
-
-### 4. Crie o banco de dados
-
-#### Via Docker
-
-```bash
-docker-compose up -d db redis
-```
-
-### 5. Execute as migrações e dados iniciais
-
-O projeto disponibiliza um script único para criar a estrutura do banco e popular dados de exemplo:
-
-```bash
-npm run setup-db
-```
-
-Esse comando executa `npm run migration:run` seguido de `npm run seed`, criando 10 produtos mockados que podem ser usados nas requisições.
-
-## Executando o Projeto
-
-### Modo Desenvolvimento
-
-```bash
-npm run dev
-```
-
-O servidor estará rodando em `http://localhost:3001`
-
-### Modo Produção
-
-```bash
-npm start
-```
-
-## Estrutura do Projeto
-
-```
-node-api/
-├── src/
-│   ├── __tests__/          # Testes automatizados (funcionais e de segurança)
-│   ├── config/             # Configurações
-│   ├── controller/         # Controladores (lógica de requisições)
-│   ├── entity/             # Entidades do banco de dados
-│   ├── middleware/         # Middlewares (validação)
-│   ├── migration/          # Migrações do banco de dados
-│   ├── routes/             # Rotas da API
-│   ├── service/            # Lógica de negócio
-│   ├── utils/              # Utilitários
-│   └── validation/         # Regras de validação
-├── .env.example            # Exemplo de variáveis de ambiente
-├── docker-compose.yml      # Configuração Docker
-├── jest.config.js          # Configuração Jest
-├── package.json            # Dependências do projeto
-└── tsconfig.json           # Configuração TypeScript
-```
-
-## Endpoints da API no postman collection de exemplo
-
-### Exemplos de payload
-
-**POST /vendas**
-
-```json
-{
-  "codigo": "VND-1001",
-  "nomeCliente": "Maria Ferreira",
-  "descontoVenda": 15.50,
-  "status": "Aberta",
-  "itens": [
-    {
-      "produtoId": 1,
-      "quantidade": 2,
-      "precoUnitario": 350.40
-    },
-    {
-      "produtoId": 4,
-      "quantidade": 1,
-      "precoUnitario": 1200.00,
-      "descontoItem": 50.00
-    }
-  ]
-}
-```
-
-Resposta `201 Created`:
-
-```json
-{
-  "id": 12,
-  "codigo": "VND-1001",
-  "dataHora": "2025-11-11T22:00:00.000Z",
-  "nomeCliente": "Maria Ferreira",
-  "descontoVenda": 115.50,
-  "valorTotal": 1785.30,
-  "status": "Aberta",
-  "itens": [
-    {
-      "id": 34,
-      "produtoId": 1,
-      "quantidade": 2,
-      "precoUnitario": 350.40,
-      "descontoItem": 65.50,
-      "valorTotal": 635.30,
-      "produto": {
-        "id": 1,
-        "nome": "Notebook Dell Inspiron",
-        "preco": 3500.00
-      }
-    },
-    {
-      "id": 35,
-      "produtoId": 4,
-      "quantidade": 1,
-      "precoUnitario": 1200.00,
-      "descontoItem": 50.00,
-      "valorTotal": 1150.00,
-      "produto": {
-        "id": 4,
-        "nome": "Monitor LG 27 polegadas",
-        "preco": 1200.00
-      }
-    }
-  ]
-}
-```
-
-**GET /vendas?page=1&limit=2**
-
-```json
-{
-  "vendas": [
-    {
-      "id": 12,
-      "codigo": "VND-1001",
-      "dataHora": "2025-11-11T22:00:00.000Z",
-      "nomeCliente": "Maria Ferreira",
-      "descontoVenda": 115.50,
-      "valorTotal": 1785.30,
-      "status": "Aberta",
-      "itens": [...]
-    }
-  ],
-  "paginacao": {
-    "page": 1,
-    "limit": 2,
-    "total": 12,
-    "totalPages": 6
-  },
-  "totalizadores": {
-    "valorTotal": 35670.20,
-    "numeroVendas": 12,
-    "quantidadeItens": 48
-  }
-}
-```
-
-## Regras de Negócio
-
-### Cálculo de Totais
-
-- O sistema calcula automaticamente os totais da venda e dos itens
-- O valor total de cada item é calculado como: `(quantidade * precoUnitario) - descontoItem`
-- O valor total da venda é a soma dos valores totais dos itens
-
-### Lógica de Desconto
-
-- **Desconto na Venda**: Se informado `descontoVenda`, o valor é rateado proporcionalmente entre os itens baseado no valor de cada item
-- **Desconto nos Itens**: Se informado `descontoItem` nos itens, o `descontoVenda` é calculado como a soma dos descontos dos itens
-
-### Validações
-
-- O código da venda deve ser único
-- O ID do produto deve existir no banco de dados
-- Campos obrigatórios: `codigo`, `nomeCliente`, `itens`
-- Cada item deve ter: `produtoId`, `quantidade`, `precoUnitario`
-
-### Status da Venda
-
-- **Aberta**: Venda em andamento
-- **Concluída**: Venda finalizada (não pode ser atualizada ou excluída)
-- **Cancelada**: Venda cancelada
-
-### Busca por Valor
-
-- O endpoint `GET /vendas` suporta busca por valor através do parâmetro `search`
-- A busca é realizada nos campos `codigo`, `nomeCliente` e `status` (case-insensitive)
-- Exemplo: `GET /vendas?search=abc` busca por "abc" em qualquer um dos campos mencionados
-
-## Segurança e OWASP
-
-### Sobre OWASP
-
-OWASP (Open Web Application Security Project) é uma organização sem fins lucrativos dedicada a melhorar a segurança de aplicações web. O projeto mantém o **OWASP Top 10**, uma lista dos 10 principais riscos de segurança em aplicações web, atualizada periodicamente.
-
-Esta API implementa práticas de segurança baseadas no OWASP Top 10 2021, garantindo proteção contra vulnerabilidades comuns.
-
-### Práticas de Segurança Implementadas
-
-#### 1. Proteção contra Injeção (A03:2021 - Injection)
-
-- **SQL Injection**: Validação de entrada com whitelist de caracteres, impedindo caracteres especiais SQL (`'`, `;`, `--`, etc.)
-- **NoSQL Injection**: Validação rigorosa de tipos, impedindo objetos maliciosos em campos numéricos
-- **Command Injection**: Rejeição de caracteres de shell (`|`, `&`, `;`, `` ` ``, `$()`)
-
-#### 2. Controle de Acesso Quebrado (A01:2021 - Broken Access Control)
-
-- Validação de IDs de parâmetros (apenas inteiros positivos válidos)
-- Validação de status da venda (apenas valores permitidos: "Aberta", "Concluída", "Cancelada")
-- Proteção contra acesso a recursos inexistentes ou inválidos
-
-#### 3. Exposição de Dados Sensíveis (A03:2021 - Data Exposure)
-
-- **Proteção contra Integer Overflow**: Validação de valores inteiros dentro do limite do MySQL INT (2,147,483,647)
-- **Precisão Decimal**: Limitação de decimais a 2 casas para valores monetários
-- Validação de limites de tamanho para strings
-
-#### 4. Falhas de Identificação e Autenticação (A07:2021)
-
-- Validação rigorosa de comprimento de strings:
-  - `codigo`: máximo 50 caracteres
-  - `nomeCliente`: máximo 100 caracteres
-  - `search`: máximo 255 caracteres
-- Validação de tipos de dados (string, integer, float)
-
-#### 5. Proteção contra XSS (A03:2021 - Cross-Site Scripting)
-
-- Rejeição de payloads XSS comuns (`<script>`, `javascript:`, `<img onerror>`, etc.)
-- Whitelist de caracteres permitidos em campos de texto
-- Sanitização automática de entrada
-
-#### 6. Configuração Incorreta de Segurança (A05:2021)
-
-- Validação de tipos de dados em todos os campos
-- Validação de limites (boundary value testing)
-- Rejeição de valores negativos onde não aplicável
-
-#### 7. Falhas de Integridade de Software e Dados (A08:2021)
-
-- Validação de arrays (tipo e conteúdo)
-- Validação de parâmetros de query (datas ISO 8601, paginação)
-- Validação de formato de datas
-
-#### 8. Design Inseguro (A04:2021)
-
-- **Sanitização de Entrada**: Remoção automática de espaços em branco no início e fim (trim)
-- Rejeição de strings contendo apenas espaços em branco
-- Normalização de dados antes do processamento
-
-### Sanitização Aplicada
-
-A API utiliza **express-validator** para sanitização e validação de entrada. As seguintes práticas são aplicadas:
-
-1. **Trim Automático**: Espaços em branco são removidos automaticamente do início e fim de strings
-2. **Whitelist de Caracteres**: Apenas caracteres alfanuméricos, espaços, hífens, underscores, pontos, vírgulas e acentos são permitidos em campos de texto
-3. **Validação de Tipo**: Conversão e validação de tipos (string, integer, float) antes do processamento
-4. **Limites de Tamanho**: Validação de comprimento máximo e mínimo para todos os campos
-5. **Validação de Formato**: Datas devem estar no formato ISO 8601 (YYYY-MM-DD)
-6. **Proteção de Overflow**: Validação de valores inteiros dentro dos limites do banco de dados
-
-### Exemplo de Validação
-
-```typescript
-// Campos de string são automaticamente sanitizados:
-"  VND-001  " → "VND-001" (trim aplicado)
-
-// Caracteres inválidos são rejeitados:
-"'; DROP TABLE vendas; --" → 400 Bad Request (caracteres SQL rejeitados)
-
-// Valores fora dos limites são rejeitados:
-produtoId: 2147483648 → 400 Bad Request (excede MySQL INT max)
-```
+Scripts úteis:
+- `npm run setup-db`: migrações + seed em um passo
+- `npm run dev` / `npm start`: dev vs produção
+- `npm test`: roda toda a suíte de testes (inclui cenários OWASP)
+
+## Variáveis de ambiente
+`env.example` lista tudo que a app lê. Principais:
+- `PORT`, `DB_HOST`, `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE`
+- `REDIS_URL` (ou `REDIS_DISABLED=true` nos testes)
+- `PRODUCT_CACHE_TTL_MS`, `PRODUCT_CACHE_MAX_SIZE`
+- `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX_REQUESTS`
+
+## Endpoints básicos
+- `POST /vendas`: cria venda (código único, itens obrigatórios). Totais e descontos são recalculados automaticamente.
+- `GET /vendas`: lista com filtros de período, busca full-text e paginação.
+- `GET /vendas/:id`, `PUT /vendas/:id`, `DELETE /vendas/:id` (com regras para status).
+
+Erros seguem RFC 7807. Duplicidade retorna `409 SALE_CODE_EXISTS`, validações falham com `400` ou `422`, e regras de negócio quebradas também respondem 422.
+
+## Segurança e performance (resumo mesmo)
+- Helmet, rate limiting e validação agressiva em toda entrada
+- Nada de stack trace em produção
+- Pool de conexões configurado no TypeORM
+- Cache de produto com `ProductCache.getMany` evita N+1 em vendas grandes
+- Índices de busca (`dataHora`, `status`, `codigo` e full-text) já migrados
 
 ## Testes
-
-O projeto possui dois conjuntos de testes:
-
-### Testes Funcionais
-
-Testes que validam a funcionalidade da API, incluindo:
-- Criação, listagem, atualização e exclusão de vendas
-- Cálculo de totais e descontos
-- Validações de regras de negócio
-- Busca por valor
-- Proteção contra atualização/exclusão de vendas concluídas
-
-### Testes de Segurança (OWASP)
-
-Suite completa de testes baseada nas práticas OWASP Top 10 2021, cobrindo:
-
-- **A03:2021 - Injection**: Testes de SQL Injection, NoSQL Injection e Command Injection
-- **A01:2021 - Broken Access Control**: Validação de IDs e parâmetros
-- **A03:2021 - Data Exposure**: Proteção contra integer overflow e validação de precisão decimal
-- **A07:2021 - Identification and Authentication Failures**: Validação de comprimento de strings
-- **A03:2021 - XSS**: Rejeição de payloads XSS
-- **A05:2021 - Security Misconfiguration**: Validação de tipos e boundary values
-- **A08:2021 - Software and Data Integrity Failures**: Validação de arrays e parâmetros de query
-- **A04:2021 - Insecure Design**: Testes de sanitização de entrada
-
-Execute os testes com:
-
 ```bash
-npm test
+npm test              # tudo
+npm run test:watch    # modo watch
 ```
+Os testes checam cálculos monetários, regras de status, busca, duplicidade e payloads maliciosos (SQLi, XSS etc.).
 
-Execute os testes em modo watch:
-
-```bash
-npm run test:watch
-```
-
-Execute os testes com cobertura:
-
-```bash
-npm run test:coverage
-```
-
-Os testes de segurança estão localizados em `src/__tests__/venda.security.test.ts` e podem ser executados isoladamente para validação de segurança.
-
-## Scripts Disponíveis
-
-- `npm run dev` - Inicia o servidor em modo desenvolvimento com hot-reload
-- `npm start` - Inicia o servidor em modo produção
-- `npm test` - Executa os testes
-- `npm run test:watch` - Executa os testes em modo watch
-- `npm run test:coverage` - Executa os testes com relatório de cobertura
-- `npm run migration:generate` - Gera uma nova migração
-- `npm run migration:run` - Executa as migrações pendentes
-- `npm run migration:revert` - Reverte a última migração
-- `npm run migration:show` - Mostra o status das migrações
-- `npm run seed` - Popula o banco de dados com produtos iniciais para testes
-- `npm run setup-db` - Executa migrações e popula o banco em um único comando
-
-## Códigos de Status HTTP
-
-- `200` - Sucesso (GET, PUT)
-- `201` - Criado com sucesso (POST)
-- `204` - Sem conteúdo (DELETE)
-- `400` - Requisição inválida (validação de entrada)
-- `404` - Recurso não encontrado
-- `422` - Entidade não processável (regras de negócio, ex: venda concluída)
-- `500` - Erro interno do servidor
-
-## Mensagens de Erro
-
-Todas as mensagens de erro são retornadas em inglês no seguinte formato:
-
-```json
-{
-  "type": "https://api.example.com/problems/conflict",
-  "title": "Conflict",
-  "status": 409,
-  "code": "SALE_CODE_EXISTS",
-  "detail": "Sale code 'VND-1001' already exists.",
-  "errors": [
-    {
-      "field": "codigo",
-      "message": "Sale code 'VND-1001' already exists."
-    }
-  ]
-}
-```
-
-## Melhorias Implementadas
-
-### Funcionalidades
-- Sistema de cache para produtos com TTL configurável
-- Validação robusta de entrada com mensagens detalhadas usando `express-validator`
-- Tratamento centralizado de erros
-- Testes automatizados abrangentes (funcionais e de segurança)
-- Suporte a transações no banco de dados
-- Endpoints adicionais para atualização e exclusão de vendas
-- Busca por valor em campos varchar
-- Proteção contra atualização/exclusão de vendas concluídas
-- Implementação de práticas OWASP Top 10 2021
-- Sanitização automática de entrada
-- Proteção contra SQL Injection, XSS, Command Injection e Integer Overflow
-- Graceful shutdown para fechamento adequado de conexões
-- Headers de segurança com `helmet` habilitado por padrão
-
-### Performance e Escalabilidade
-
-#### 1. Rate Limiting
-- **Implementado**: Middleware de rate limiting usando `express-rate-limit`
-- **Configuração**: 100 requisições por 15 minutos por IP (configurável via variáveis de ambiente)
-- **Variáveis**: `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX_REQUESTS`
-
-#### 2. Database Connection Pooling
-- **Implementado**: Pool de conexões configurável no TypeORM
-- **Configuração**: 10 conexões simultâneas por padrão (configurável via `DB_POOL_SIZE`)
-- **Benefício**: Melhora a escalabilidade e performance sob carga alta
-- **Por que precisa**: Sem pooling, cada requisição criaria uma nova conexão, esgotando recursos rapidamente
-
-#### 3. Cache distribuído com Redis (TTL + Eviction)
-- **Implementado**: Cache de produtos armazenado no Redis, substituindo o cache em memória
-- **Configuração**:
-  - TTL: 5 minutos (configurável via `PRODUCT_CACHE_TTL_MS`)
-  - Tamanho máximo: 1000 entradas (configurável via `PRODUCT_CACHE_MAX_SIZE`)
-  - Política de eviction: LRU gerenciada pela aplicação + `allkeys-lru` configurado no container Redis
-- **Benefício**: Limita o uso de memória, compartilha cache entre instâncias e mantém dados consistentes após deploys
-- **Fallback**: Defina `REDIS_DISABLED=true` em ambientes onde o Redis não esteja disponível (ex.: testes automatizados)
-
-#### 4. Cálculos monetários precisos
-- **Implementado**: Utilização de `big.js` e utilitários em `utils/money.ts`
-- **Benefício**: Evita erros de arredondamento com ponto flutuante e garante a soma exata de descontos e totais
-- **Detalhes**: Rateio do desconto da venda distribui o valor proporcionalmente e ajusta centavos residuais no último item
-
-#### 5. Índices de Performance
-- **Implementado**: Índices estratégicos para as consultas mais frequentes
-- **Índices adicionados via migração**:
-  - `IDX_VENDAS_DATAHORA`: Ordenação e filtros por data (`ORDER BY dataHora DESC`)
-  - `IDX_VENDAS_STATUS_DATAHORA`: Filtros por status combinados com ordenação por data
-  - `IDX_VENDAS_NOMECLIENTE`: Apoia filtros por nome do cliente
-  - `IDX_VENDAS_FULLTEXT_SEARCH`: Índice FULLTEXT em `codigo` + `nomeCliente` para busca textual
-
-#### 6. Busca full-text otimizada
-- **Implementado**: Consultas `MATCH ... AGAINST` em modo booleano para `codigo` e `nomeCliente`
-- **Relevância**: Resultados são ordenados por relevância antes da ordenação por data
-- **Controle inteligente**: Quando o termo pesquisado tem menos de 3 caracteres o sistema retorna ao `LIKE`
-
-#### 7. Logging Condicional
-- **Implementado**: Logging habilitado apenas em desenvolvimento
-- **Benefício**: Reduz overhead em produção
-- **Configuração**: `logging: process.env.NODE_ENV === 'development'`
-
-## Estrutura do Banco de Dados
-
-### Tabela: vendas
-- `id` (PK, auto-incremento)
-- `codigo` (único, indexado)
-- `dataHora` (timestamp automático)
-- `nomeCliente`
-- `descontoVenda`
-- `valorTotal`
-- `status` (enum: Aberta, Concluída, Cancelada)
-
-### Tabela: venda_itens
-- `id` (PK, auto-incremento)
-- `venda_id` (FK para vendas, CASCADE)
-- `produto_id` (FK para produtos, RESTRICT)
-- `quantidade`
-- `precoUnitario`
-- `descontoItem`
-- `valorTotal`
-
-### Tabela: produtos
-- `id` (PK, auto-incremento)
-- `nome`
-- `preco`
-
-## Licença
-
-Este projeto foi desenvolvido como teste técnico.
+---
+Projeto feito para o desafio de backend de Vendas.

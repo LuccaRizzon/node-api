@@ -48,9 +48,12 @@ export class VendaService {
                 itens: []
             };
 
+            const uniqueProdutoIds = Array.from(new Set(dto.itens.map(item => item.produtoId)));
+            const produtosMap = await ProductCache.getMany(uniqueProdutoIds, queryRunner);
+
             for (let index = 0; index < dto.itens.length; index++) {
                 const item = dto.itens[index];
-                const produto = await ProductCache.get(item.produtoId, queryRunner);
+                const produto = produtosMap.get(item.produtoId);
                 if (!produto) {
                     throw notFoundError(
                         `Product with ID ${item.produtoId} was not found.`,
@@ -292,6 +295,9 @@ export class VendaService {
             }
 
             if (dto.itens && Array.isArray(dto.itens) && dto.itens.length > 0) {
+                const uniqueProdutoIds = Array.from(new Set(dto.itens.map(item => item.produtoId)));
+                const produtosMap = await ProductCache.getMany(uniqueProdutoIds, queryRunner);
+
                 await queryRunner.manager.remove(VendaItem, venda.itens);
 
                 const vendaItens: VendaItem[] = [];
@@ -302,7 +308,7 @@ export class VendaService {
 
                 for (let index = 0; index < dto.itens.length; index++) {
                     const item = dto.itens[index];
-                    const produto = await ProductCache.get(item.produtoId, queryRunner);
+                    const produto = produtosMap.get(item.produtoId);
                     if (!produto) {
                         throw notFoundError(
                             `Product with ID ${item.produtoId} was not found.`,
